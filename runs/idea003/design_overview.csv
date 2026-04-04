@@ -1,3 +1,3 @@
 Design_ID,Design_Description,Status
-design001,Homoscedastic Uncertainty Loss Weighting,Implemented
-design002,Linear Warmup for Depth Loss,Implemented
+design001,Homoscedastic Uncertainty Loss Weighting,Done
+design002,Linear Warmup for Depth Loss,Done

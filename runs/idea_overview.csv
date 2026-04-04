@@ -1,6 +1,6 @@
 Idea_ID,Idea_Name,Status
-idea001,RGB-D Modality Fusion Strategy,Training
+idea001,RGB-D Modality Fusion Strategy,Done
 idea002,Kinematic Attention Masking,Done
-idea003,Curriculum-Based Loss Weighting,Implemented
-idea004,Layer-Wise Learning Rate Decay & Progressive Unfreezing,Implemented
+idea003,Curriculum-Based Loss Weighting,Done
+idea004,Layer-Wise Learning Rate Decay & Progressive Unfreezing,Done
 idea005,Depth-Aware Positional Embeddings,Designed

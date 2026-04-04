@@ -1,7 +1,7 @@
 Design_ID,Design_Description,Status
-design001,Constant Decay LLRD,Training
-design002,Constant Decay LLRD (gamma=0.90 unfreeze=5),Implemented
-design003,Constant Decay LLRD (gamma=0.85 unfreeze=5),Implemented
-design004,Constant Decay LLRD (gamma=0.95 unfreeze=10),Implemented
-design005,Constant Decay LLRD (gamma=0.90 unfreeze=10),Implemented
-design006,Constant Decay LLRD (gamma=0.85 unfreeze=10),Implemented
+design001,Constant Decay LLRD,Done
+design002,Constant Decay LLRD (gamma=0.90 unfreeze=5),Done
+design003,Constant Decay LLRD (gamma=0.85 unfreeze=5),Done
+design004,Constant Decay LLRD (gamma=0.95 unfreeze=10),Done
+design005,Constant Decay LLRD (gamma=0.90 unfreeze=10),Done
+design006,Constant Decay LLRD (gamma=0.85 unfreeze=10),Done
