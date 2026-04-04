@@ -19,7 +19,16 @@ def main():
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AutoSapiens Project Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>body { padding-top: 2rem; background-color: #f8f9fa;} .idea-card { margin-bottom: 2rem; }</style>
+    <style>
+        body { padding-top: 2rem; background-color: #f8f9fa; } 
+        .idea-card { margin-bottom: 2rem; }
+        .text-umass-red { color: #881c1c !important; }
+        .bg-umass-red { background-color: #881c1c !important; color: white !important; }
+        .btn-outline-umass-red { border-color: #881c1c; color: #881c1c; text-decoration: none; }
+        .btn-outline-umass-red:hover { background-color: #881c1c; color: white; }
+        a { color: #881c1c; text-decoration: none; }
+        a:hover { color: #5a1212; text-decoration: underline; }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -31,7 +40,7 @@ def main():
         <h2 class="mt-5">Results Overview</h2>
         <div class="table-responsive">
             <table class="table table-striped table-hover mt-3 shadow-sm rounded" id="resultsTable">
-                <thead class="table-dark">
+                <thead class="bg-umass-red">
                     <tr>
                         <th onclick="sortTable(0)" style="cursor: pointer;" title="Click to sort">Idea ID ↕</th>
                         <th onclick="sortTable(1)" style="cursor: pointer;" title="Click to sort">Design ID ↕</th>
@@ -49,7 +58,7 @@ def main():
         design_id = row.get('design_id', '')
         
         is_baseline = (idea_id == 'idea001' and design_id == 'design001') or (idea_id == 'idea002' and design_id == 'design001')
-        badge = ' <span class="badge bg-secondary">Baseline</span>' if is_baseline else ''
+        badge = ' <span class="badge bg-umass-red">Baseline</span>' if is_baseline else ''
         
         html += f"""                    <tr{" class='table-secondary'" if is_baseline else ""}>
                         <td><a href="https://github.com/yanghangAI/autosapiens/blob/main/runs/{idea_id}/idea.md" target="_blank">{idea_id}</a></td>
@@ -84,10 +93,10 @@ def main():
             <div class="col-md-6 idea-card">
                 <div class="card h-100 shadow-sm">
                     <div class="card-body">
-                        <h5 class="card-title text-primary"><a href="https://github.com/yanghangAI/autosapiens/blob/main/runs/{iid}/idea.md" target="_blank" style="text-decoration: none;">{iid}: {name}</a></h5>
+                        <h5 class="card-title text-umass-red"><a href="https://github.com/yanghangAI/autosapiens/blob/main/runs/{iid}/idea.md" target="_blank" style="text-decoration: none;">{iid}: {name}</a></h5>
                         <h6 class="card-subtitle mb-2 text-muted">Status: {status}</h6>
                         <div class="card-text small"><pre style="white-space: pre-wrap;">{desc}</pre></div>
-                        <a href="https://github.com/yanghangAI/autosapiens/tree/main/runs/{iid}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">View Full Idea & Designs</a>
+                        <a href="https://github.com/yanghangAI/autosapiens/tree/main/runs/{iid}" target="_blank" class="btn btn-sm btn-outline-umass-red mt-2">View Full Idea & Designs</a>
                     </div>
                 </div>
             </div>
