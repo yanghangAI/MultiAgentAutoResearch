@@ -1,91 +1,0 @@
-Loading conda version miniforge3-24.7.1
-[test] Running train.py in runs/idea001/design003 with 2 train seqs, 1 val seq, for 2 epochs.
-Device: cuda
-Output: /work/pi_nwycoff_umass_edu/hang/auto/runs/idea001/design003/test_output
-  Saved script snapshot → /work/pi_nwycoff_umass_edu/hang/auto/runs/idea001/design003/test_output/train_snapshot.py
-
-Building data splits ...
-  Loaded splits from /work/pi_nwycoff_umass_edu/hang/auto/splits_rome_tracking.json
-  Sequences — train: 2, val: 1
-  Frames  — train: 61, val: 33
-
-Building sapiens_0.3b ...
-[weights] pos_embed: 64x64 -> 40x24  (bicubic)
-[weights] Loaded 293 / 315 backbone tensors
-[weights] DepthTokenizer: zero-init (not loaded from checkpoint)
-[weights] DepthCrossAttention: Xavier/zero-init (not loaded from checkpoint)
-[weights] Head (81 tensors) randomly initialised
-  Parameters: 317.6M
-
-Starting training for 2 epochs ...
-
-Epoch 1/2  lr_backbone=3.33e-06  lr_depth_adapter=3.33e-05  lr_head=3.33e-05
-Epoch 1 [train]:   0%|          | 0/16 [00:00<?, ?it/s]                                                       Epoch 1 [train]:   0%|          | 0/16 [00:02<?, ?it/s]Epoch 1 [train]:   0%|          | 0/16 [00:02<?, ?it/s, body=615.6mm, loss=0.5083, pelvis=1778.5mm, w=999.3mm]Epoch 1 [train]:   6%|▋         | 1/16 [00:02<00:35,  2.35s/it, body=615.6mm, loss=0.5083, pelvis=1778.5mm, w=999.3mm]Epoch 1 [train]:   6%|▋         | 1/16 [00:04<00:35,  2.35s/it, body=687.4mm, loss=0.5410, pelvis=1700.4mm, w=1021.7mm]Epoch 1 [train]:  12%|█▎        | 2/16 [00:04<00:29,  2.09s/it, body=687.4mm, loss=0.5410, pelvis=1700.4mm, w=1021.7mm]Epoch 1 [train]:  12%|█▎        | 2/16 [00:06<00:29,  2.09s/it, body=690.0mm, loss=0.5516, pelvis=1826.1mm, w=1064.9mm]Epoch 1 [train]:  19%|█▉        | 3/16 [00:06<00:26,  2.00s/it, body=690.0mm, loss=0.5516, pelvis=1826.1mm, w=1064.9mm]Epoch 1 [train]:  19%|█▉        | 3/16 [00:08<00:26,  2.00s/it, body=679.6mm, loss=0.5578, pelvis=1930.9mm, w=1092.5mm]Epoch 1 [train]:  25%|██▌       | 4/16 [00:08<00:23,  1.97s/it, body=679.6mm, loss=0.5578, pelvis=1930.9mm, w=1092.5mm]Epoch 1 [train]:  25%|██▌       | 4/16 [00:09<00:23,  1.97s/it, body=671.0mm, loss=0.5594, pelvis=1983.8mm, w=1104.2mm]Epoch 1 [train]:  31%|███▏      | 5/16 [00:09<00:21,  1.95s/it, body=671.0mm, loss=0.5594, pelvis=1983.8mm, w=1104.2mm]Epoch 1 [train]:  31%|███▏      | 5/16 [00:11<00:21,  1.95s/it, body=684.0mm, loss=0.5569, pelvis=1918.5mm, w=1091.4mm]Epoch 1 [train]:  38%|███▊      | 6/16 [00:11<00:19,  1.94s/it, body=684.0mm, loss=0.5569, pelvis=1918.5mm, w=1091.4mm]Epoch 1 [train]:  38%|███▊      | 6/16 [00:13<00:19,  1.94s/it, body=675.7mm, loss=0.5533, pelvis=1949.3mm, w=1096.0mm]Epoch 1 [train]:  44%|████▍     | 7/16 [00:13<00:17,  1.93s/it, body=675.7mm, loss=0.5533, pelvis=1949.3mm, w=1096.0mm]Epoch 1 [train]:  44%|████▍     | 7/16 [00:15<00:17,  1.93s/it, body=680.0mm, loss=0.5632, pelvis=1978.9mm, w=1108.7mm]Epoch 1 [train]:  50%|█████     | 8/16 [00:15<00:15,  1.96s/it, body=680.0mm, loss=0.5632, pelvis=1978.9mm, w=1108.7mm]Epoch 1 [train]:  50%|█████     | 8/16 [00:17<00:15,  1.96s/it, body=717.1mm, loss=0.5761, pelvis=1891.3mm, w=1104.6mm]Epoch 1 [train]:  56%|█████▋    | 9/16 [00:17<00:13,  1.95s/it, body=717.1mm, loss=0.5761, pelvis=1891.3mm, w=1104.6mm]Epoch 1 [train]:  56%|█████▋    | 9/16 [00:18<00:14,  2.04s/it, body=717.1mm, loss=0.5761, pelvis=1891.3mm, w=1104.6mm]
-[GPU mem after batch 1] allocated=2.40GB  reserved=7.22GB
-Traceback (most recent call last):
-  File "<stdin>", line 17, in <module>
-  File "/work/pi_nwycoff_umass_edu/hang/auto/runs/idea001/design003/train.py", line 1036, in main
-    train_m = train_one_epoch(model, train_loader, optimizer, scaler, device, epoch + 1, args,
-              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/hang/auto/runs/idea001/design003/train.py", line 868, in train_one_epoch
-    out    = model(x)
-             ^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/.conda/envs/hang/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/.conda/envs/hang/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
-    return forward_call(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/hang/auto/runs/idea001/design003/train.py", line 768, in forward
-    feat = self.backbone(rgb, depth)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/.conda/envs/hang/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/.conda/envs/hang/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
-    return forward_call(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/hang/auto/runs/idea001/design003/train.py", line 612, in forward
-    x = grad_ckpt(self.depth_cross_attn, x, d, use_reentrant=False)
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/.conda/envs/hang/lib/python3.11/site-packages/torch/_compile.py", line 32, in inner
-    return disable_fn(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/.conda/envs/hang/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py", line 745, in _fn
-    return fn(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/.conda/envs/hang/lib/python3.11/site-packages/torch/utils/checkpoint.py", line 496, in checkpoint
-    ret = function(*args, **kwargs)
-          ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/.conda/envs/hang/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/.conda/envs/hang/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
-    return forward_call(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/hang/auto/runs/idea001/design003/train.py", line 553, in forward
-    x = x + self.ffn(self.ffn_norm(x))
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/.conda/envs/hang/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/.conda/envs/hang/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
-    return forward_call(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/.conda/envs/hang/lib/python3.11/site-packages/torch/nn/modules/container.py", line 250, in forward
-    input = module(input)
-            ^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/.conda/envs/hang/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/.conda/envs/hang/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
-    return forward_call(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/.conda/envs/hang/lib/python3.11/site-packages/torch/nn/modules/dropout.py", line 70, in forward
-    return F.dropout(input, self.p, self.training, self.inplace)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/.conda/envs/hang/lib/python3.11/site-packages/torch/nn/functional.py", line 1425, in dropout
-    _VF.dropout_(input, p, training) if inplace else _VF.dropout(input, p, training)
-                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 60.00 MiB. GPU 0 has a total capacity of 10.90 GiB of which 27.25 MiB is free. Including non-PyTorch memory, this process has 10.87 GiB memory in use. Of the allocated memory 10.58 GiB is allocated by PyTorch, and 118.11 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
-[test] Finished.

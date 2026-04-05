@@ -1,61 +1,0 @@
-Loading conda version miniforge3-24.7.1
-[test] Running train.py in runs/idea001/design003 with 2 train seqs, 1 val seq, for 2 epochs.
-Device: cuda
-Output: /work/pi_nwycoff_umass_edu/hang/auto/runs/idea001/design003/test_output
-  Saved script snapshot → /work/pi_nwycoff_umass_edu/hang/auto/runs/idea001/design003/test_output/train_snapshot.py
-
-Building data splits ...
-  Loaded splits from /work/pi_nwycoff_umass_edu/hang/auto/splits_rome_tracking.json
-  Sequences — train: 2, val: 1
-  Frames  — train: 61, val: 33
-
-Building sapiens_0.3b ...
-[weights] pos_embed: 64x64 -> 40x24  (bicubic)
-[weights] Loaded 293 / 315 backbone tensors
-[weights] DepthTokenizer: zero-init (not loaded from checkpoint)
-[weights] DepthCrossAttention: Xavier/zero-init (not loaded from checkpoint)
-[weights] Head (81 tensors) randomly initialised
-  Parameters: 317.6M
-
-Starting training for 2 epochs ...
-
-Epoch 1/2  lr_backbone=3.33e-06  lr_depth_adapter=3.33e-05  lr_head=3.33e-05
-Epoch 1 [train]:   0%|          | 0/16 [00:00<?, ?it/s]                                                       Epoch 1 [train]:   0%|          | 0/16 [00:05<?, ?it/s]Epoch 1 [train]:   0%|          | 0/16 [00:05<?, ?it/s, body=648.6mm, loss=0.5290, pelvis=1826.2mm, w=1037.2mm]Epoch 1 [train]:   6%|▋         | 1/16 [00:05<01:19,  5.29s/it, body=648.6mm, loss=0.5290, pelvis=1826.2mm, w=1037.2mm]Epoch 1 [train]:   6%|▋         | 1/16 [00:07<01:19,  5.29s/it, body=688.8mm, loss=0.5487, pelvis=1746.9mm, w=1038.0mm]Epoch 1 [train]:  12%|█▎        | 2/16 [00:07<00:46,  3.33s/it, body=688.8mm, loss=0.5487, pelvis=1746.9mm, w=1038.0mm]Epoch 1 [train]:  12%|█▎        | 2/16 [00:09<00:46,  3.33s/it, body=686.8mm, loss=0.5582, pelvis=1837.9mm, w=1066.6mm]Epoch 1 [train]:  19%|█▉        | 3/16 [00:09<00:34,  2.69s/it, body=686.8mm, loss=0.5582, pelvis=1837.9mm, w=1066.6mm]Epoch 1 [train]:  19%|█▉        | 3/16 [00:11<00:34,  2.69s/it, body=675.7mm, loss=0.5646, pelvis=1964.5mm, w=1101.0mm]Epoch 1 [train]:  25%|██▌       | 4/16 [00:11<00:28,  2.40s/it, body=675.7mm, loss=0.5646, pelvis=1964.5mm, w=1101.0mm]Epoch 1 [train]:  25%|██▌       | 4/16 [00:13<00:28,  2.40s/it, body=671.3mm, loss=0.5666, pelvis=2018.5mm, w=1115.9mm]Epoch 1 [train]:  31%|███▏      | 5/16 [00:13<00:24,  2.22s/it, body=671.3mm, loss=0.5666, pelvis=2018.5mm, w=1115.9mm]Epoch 1 [train]:  31%|███▏      | 5/16 [00:14<00:24,  2.22s/it, body=683.6mm, loss=0.5652, pelvis=1954.7mm, w=1103.1mm]Epoch 1 [train]:  38%|███▊      | 6/16 [00:14<00:21,  2.12s/it, body=683.6mm, loss=0.5652, pelvis=1954.7mm, w=1103.1mm]Epoch 1 [train]:  38%|███▊      | 6/16 [00:16<00:21,  2.12s/it, body=690.1mm, loss=0.5707, pelvis=1969.8mm, w=1112.4mm]Epoch 1 [train]:  44%|████▍     | 7/16 [00:16<00:18,  2.06s/it, body=690.1mm, loss=0.5707, pelvis=1969.8mm, w=1112.4mm]Epoch 1 [train]:  44%|████▍     | 7/16 [00:19<00:18,  2.06s/it, body=688.8mm, loss=0.5751, pelvis=1992.6mm, w=1119.1mm]Epoch 1 [train]:  50%|█████     | 8/16 [00:19<00:16,  2.12s/it, body=688.8mm, loss=0.5751, pelvis=1992.6mm, w=1119.1mm]Epoch 1 [train]:  50%|█████     | 8/16 [00:21<00:16,  2.12s/it, body=729.8mm, loss=0.5902, pelvis=1909.3mm, w=1119.1mm]Epoch 1 [train]:  56%|█████▋    | 9/16 [00:21<00:14,  2.05s/it, body=729.8mm, loss=0.5902, pelvis=1909.3mm, w=1119.1mm]Epoch 1 [train]:  56%|█████▋    | 9/16 [00:21<00:17,  2.43s/it, body=729.8mm, loss=0.5902, pelvis=1909.3mm, w=1119.1mm]
-[GPU mem after batch 1] allocated=2.40GB  reserved=7.88GB
-Traceback (most recent call last):
-  File "<stdin>", line 17, in <module>
-  File "/work/pi_nwycoff_umass_edu/hang/auto/runs/idea001/design003/train.py", line 1026, in main
-    train_m = train_one_epoch(model, train_loader, optimizer, scaler, device, epoch + 1, args,
-              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/hang/auto/runs/idea001/design003/train.py", line 858, in train_one_epoch
-    out    = model(x)
-             ^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/.conda/envs/hang/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/.conda/envs/hang/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
-    return forward_call(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/hang/auto/runs/idea001/design003/train.py", line 758, in forward
-    feat = self.backbone(rgb, depth)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/.conda/envs/hang/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/.conda/envs/hang/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
-    return forward_call(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/hang/auto/runs/idea001/design003/train.py", line 604, in forward
-    x = self.depth_cross_attn(x, d)        # (B, 960, 1024)
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/.conda/envs/hang/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/.conda/envs/hang/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
-    return forward_call(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/work/pi_nwycoff_umass_edu/hang/auto/runs/idea001/design003/train.py", line 537, in forward
-    attn  = (Q @ K.transpose(-2, -1)) * scale   # (B, num_heads, N, N)
-             ~~^~~~~~~~~~~~~~~~~~~~~
-torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 114.00 MiB. GPU 0 has a total capacity of 10.90 GiB of which 51.25 MiB is free. Including non-PyTorch memory, this process has 10.85 GiB memory in use. Of the allocated memory 10.51 GiB is allocated by PyTorch, and 173.93 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
-[test] Finished.
