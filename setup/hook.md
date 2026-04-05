@@ -66,5 +66,5 @@ You cannot edit the user's crontab directly. Send a direct message to the user c
 ```text
 Your Git post-commit hook and agent post-action hooks are successfully configured!
 To set up the periodic scheduled hook for the SLURM cluster, please run `crontab -e` in your terminal and add this line:
-*/15 * * * * cd /work/pi_nwycoff_umass_edu/hang/auto && flock -w 300 /tmp/sapiens_pipeline.lock -c "./scripts/run_summarize.sh && python scripts/tracker.py sync_all && ./scripts/auto_submit.sh" >> /work/pi_nwycoff_umass_edu/hang/auto/cron_hook.log 2>&1
+0 * * * * cd /work/pi_nwycoff_umass_edu/hang/auto && flock -w 300 /tmp/sapiens_pipeline.lock -c "./scripts/run_summarize.sh && python scripts/tracker.py sync_all && ./scripts/auto_submit.sh" >> /work/pi_nwycoff_umass_edu/hang/auto/cron_hook.log 2>&1
 ```
