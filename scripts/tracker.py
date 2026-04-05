@@ -133,6 +133,12 @@ def auto_update_status(idea_id, design_id):
             with open(code_review_path, 'r', encoding='utf-8') as f:
                 if "APPROVED" in f.read():
                     d_status = "Implemented"
+
+        # Check if slurm_*.out exists in the design directory indicating it's been submitted
+        if d_status == 'Implemented':
+            import glob
+            if glob.glob(os.path.join(design_dir, 'slurm_*.out')):
+                d_status = 'Submitted'
         
         if not d_status and os.path.exists(review_path):
             with open(review_path, 'r', encoding='utf-8') as f:

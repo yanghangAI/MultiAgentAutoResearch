@@ -12,9 +12,7 @@ IMPORTANT: When handing off a task or passing feedback between agents (e.g., fro
 
 3. Call the **Builder** — instruct it to begin by reading `docs/prompts/Builder.md` for its full prompt. The Architect will tell you when to spawn this step (after all designs for an idea are drafted). The Builder will implement each design by writing `train.py` for each.
 *Note: The Builder will ask you to spawn a review for the `train.py` code once it passes a 2-epoch test. You must spawn the **Reviewer** and act as the messenger to pass its feedback back to the Builder. The Builder cannot mark a design 'Implemented' until the Reviewer has explicitly approved the code.*
-*Dependency rule: if a design's `design.md` declares a starting point that is another design, ensure that source design is already `Implemented`/`Training`/`Done` before asking Builder to bootstrap from it. Otherwise, delay that dependent design and implement its source first (or request a baseline fallback revision from Designer).*
-
-4. Call the **Runner** — instruct it to begin by reading `docs/prompts/Runner.md` for its full prompt. Use a cheaper model (e.g. Haiku) for the Runner since its task is purely operational (submitting jobs, monitoring `squeue`, reading logs).
+*Dependency rule: if a design's `design.md` declares a starting point that is another design, ensure that source design is already `Implemented`/`Submitted`/`Training`/`Done` before asking Builder to bootstrap from it. Otherwise, delay that dependent design and implement its source first (or request a baseline fallback revision from Designer).*
 
 **Rule:** You are exclusively responsible for writing to and maintaining the state of `runs/idea_overview.csv` and `runs/idea*/design_overview.csv`. Do not instruct subagents to update these files directly. Use `python scripts/tracker.py` for all CSV operations:
 - **Row creation only:** `add_idea` and `add_design` to register new ideas and designs (initial status is set automatically).
