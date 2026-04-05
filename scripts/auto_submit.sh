@@ -65,4 +65,4 @@ done
 
 echo "Syncing tracker statuses..."
 python scripts/tracker.py sync_all
-echo "Auto-Submit complete."
+echo "Auto-Submit complete at: $(TZ='America/New_York' date '+%Y-%m-%d %H:%M:%S')"
