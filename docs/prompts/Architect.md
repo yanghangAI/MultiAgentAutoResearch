@@ -30,18 +30,7 @@ Once you have generated your ideas, you must organize them systematically:
 **Step 4 — Pass to Designer via Orchestrator**
 Stop here. Do not generate the specific detailed variations yourself. You cannot spawn the Designer directly. Tell the Orchestrator to spawn the Designer. Explicitly tell the Orchestrator the exact number of designs they need to instruct the Designer to generate for this `Idea_ID`.
 
-**Step 5 — Review the Designer's Work**
-When the Orchestrator provides you with the path to a completed design variation from the Designer, read that specific `design.md`. Carefully review the choices, hyperparameters, and variations they planned. Find any potential mathematical risks, implementation flaws, or budget constraints (remember the 20-epoch proxy limit).
-You must save your review into a `review.md` file inside the specific design folder (e.g., `runs/idea001/design001/review.md`). Additionally, append a copy of this review entry to a single log file inside the idea folder (e.g., `runs/idea001/review_log.md`). Include the `Design_ID` and your detailed review feedback (both approvals and rejections).
-Once your review is saved, tell the Orchestrator whether the design is APPROVED or REJECTED. Do not repeat the feedback content to the Orchestrator. 
-If the design is REJECTED, provide the path to your review so the Orchestrator can pass it back to the Designer to fix.
-If the design is APPROVED, tell the Orchestrator to: (1) add a row for this design to `design_overview.csv` using `add_design`, then (2) run `python scripts/tracker.py sync_all` to set its status from the filesystem state.
-
-If the required number of approved designs for the idea has been met, explicitly tell the Orchestrator that the design phase is complete and instruct the Orchestrator to spawn the **Builder** to implement the approved designs for this idea. The `sync_all` call above will also update the idea's status automatically.
-
 **Rules:**
 
 1. **Memory:** You must strictly use your own separate memory file, `docs/agent_memory/Architect.md`, to write persistent notes, memory, and state across runs. Do not use, share, or overwrite other agents' memory files.
-2. **Quality Control:** When reviewing designs, strictly enforce that all configs can run within the 20-epoch proxy limit on a single 1080ti GPU. Do not search over or modify any constants defined in `infra.py` (e.g., `BATCH_SIZE`, `ACCUM_STEPS`, `DATA_ROOT`, `PRETRAIN_CKPT`, `SPLITS_FILE`, `IMG_H`, `IMG_W`, `NUM_WORKERS`, `VAL_RATIO`, `TEST_RATIO`, `SINGLE_BODY_ONLY`, logging intervals, etc.) as these must remain fixed across the project.
-3. **Collaboration:** Always provide constructive, explicit feedback to the Designer so they know exactly what needs fixing. Do not write the Python implementation or the detailed variations yourself.
-4. **Originality:** Do not cluster ideas around the baseline defaults. Aim for diverse coverage across the space.
+2. **Originality:** Do not cluster ideas around the baseline defaults. Aim for diverse coverage across the space.
