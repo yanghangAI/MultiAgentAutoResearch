@@ -1,100 +1,197 @@
 # Multi-Agent Auto Research
 
-A reusable multi-agent automation framework for research and ML experiments. Provides a consistent operating model for running iterative experiments end to end: define ideas, draft design variants, implement and review changes, submit runs, track status, summarize results, and publish a dashboard.
+Run iterative ML experiments with AI agents handling the entire research loop — from proposing ideas to submitting jobs to publishing results.
 
-The system is **project-agnostic** — adapt behavior via `.automation.yaml` and agent prompts rather than rewriting the automation core.
+You bring a training codebase. The agents handle the rest.
 
-## Workflow
+---
+
+## What It Does
+
+ML research is repetitive: come up with an idea, implement it, run it, check results, repeat. This framework delegates that loop to a team of AI agents that collaborate through a structured workflow:
 
 ```
-Architect → Designer → Reviewer → Builder → Reviewer → Orchestrator (submit)
+Architect → Designer → Reviewer → Builder → Reviewer → Orchestrator
+    ↑                                                        |
+    └──────────────── new ideas from results ────────────────┘
 ```
 
-1. **Architect** proposes an idea and expected number of designs.
-2. **Designer** writes one or more concrete `design.md` specs.
-3. **Reviewer** audits design quality and feasibility.
-4. **Builder** implements approved designs and runs sanity checks.
-5. **Reviewer** audits implementation fidelity and correctness.
-6. **Orchestrator** syncs statuses and submits eligible runs.
-7. Results are summarized and shown in the dashboard.
+Each agent has a focused role:
+
+| Agent | What it does |
+|---|---|
+| **Architect** | Reads prior results, proposes new experiment ideas |
+| **Designer** | Writes concrete implementation specs (`design.md`) |
+| **Reviewer** | Approves or rejects designs and implementations |
+| **Builder** | Implements approved designs, runs sanity tests |
+| **Orchestrator** | Coordinates agents, syncs status, submits training jobs |
+
+Experiment state is tracked in plain CSV files under `runs/`. The CLI keeps everything in sync.
+
+---
+
+## Getting Started
+
+### 1. Clone the repo
+
+```bash
+git clone https://github.com/yanghangAI/MultiAgentAutoResearch.git
+cd MultiAgentAutoResearch
+```
+
+No dependencies beyond the Python standard library (plus `pytest` to run tests).
+
+### 2. Run the Setup Agent
+
+Point the **Setup Agent** (`setup/Setup_Agent.md`) at your project:
+
+> "Set up this repo for my project at `/path/to/my/project`"
+
+That's it. The Setup Agent:
+- Reads your training code to understand metrics, config, and runtime environment
+- Asks you clarifying questions if anything is ambiguous
+- Configures `.automation.yaml` for your project
+- Writes and tests `infra/` (shared utilities) and `baseline/` (starting implementation)
+- Updates all agent prompts with your project's vocabulary and conventions
+- Validates the full pipeline end-to-end before handing off
+
+### 3. Start the research loop
+
+Spawn the **Orchestrator** (`agents/Orchestrator/prompt.md`) and let it run:
+
+> "Start the research loop"
+
+The Orchestrator spawns the Architect, which reads prior results and proposes ideas. From there the loop runs autonomously — designing, implementing, reviewing, submitting — and surfaces results in the dashboard.
+
+---
+
+## Day-to-Day Usage
+
+Once set up, you interact with the framework at two levels:
+
+**Let agents run the loop** — spawn the Orchestrator when you want new experiments. It coordinates everything.
+
+**Run CLI commands when you need a manual sync:**
+
+```bash
+# After training outputs change — update all statuses
+python scripts/cli.py sync-status
+
+# When you want to submit all ready designs
+python scripts/cli.py submit-implemented
+
+# Rebuild and publish the results dashboard
+python scripts/cli.py update-all
+```
+
+**Bootstrap a new design manually:**
+
+```bash
+# Copy baseline into a new design folder
+python scripts/cli.py setup-design baseline/ runs/idea001/design002/
+```
+
+**Check results:**
+
+```bash
+python scripts/cli.py summarize-results   # aggregates metrics.csv → results.csv
+python scripts/cli.py build-dashboard     # generates website/index.html
+```
+
+---
+
+## How Experiments Are Tracked
+
+Every experiment follows an **idea → design** lifecycle stored in `runs/`:
+
+```
+runs/
+  idea_overview.csv              ← all ideas and their status
+  idea001/
+    idea.md                      ← what to explore and why
+    design_overview.csv          ← all designs under this idea
+    design001/
+      design.md                  ← concrete implementation spec
+      review.md                  ← Reviewer decision (APPROVED / REJECTED)
+      code_review.md             ← post-implementation code audit
+      code/                      ← actual implementation (bootstrapped by setup-design)
+```
+
+Statuses are derived automatically from filesystem signals — review files, training outputs, job logs. Never edit CSVs by hand; run `sync-status` instead.
+
+**Design lifecycle:**
+
+```
+Not Implemented → Implemented → Submitted → Training → Done
+```
+
+**Idea lifecycle** (derived from its designs):
+
+```
+Not Designed → Designed → Implemented → Training → Done
+```
+
+---
+
+## Configuration
+
+All behavior is controlled by `.automation.yaml`. The key fields:
+
+```json
+{
+  "results": {
+    "metric_fields": ["train_loss", "val_loss"],
+    "primary_metric": "val_loss",
+    "metrics_glob": "**/metrics.csv"
+  },
+  "status": {
+    "done_epoch": 100
+  },
+  "submit": {
+    "submit_train_command_template": "{root}/scripts/slurm/submit_train.sh {train_script} {job_name}"
+  },
+  "dashboard": {
+    "github_repo_url": "https://github.com/your-org/your-repo"
+  }
+}
+```
+
+The Setup Agent fills this in for you. You only need to touch it if your project's metrics or compute environment changes.
+
+---
 
 ## Repository Layout
 
 ```
-agents/          Per-agent prompt.md and memory.md
-baseline/        Canonical starting implementation for new design bootstraps
-infra/           Shared stable code (dataset utils, metrics, logging)
-runs/            Experiment tracking workspace
-  idea_overview.csv
-  <idea_id>/
-    idea.md
-    design_overview.csv
-    <design_id>/
-      design.md
-      review.md / code_review.md
-scripts/         Automation CLI and shared logic
-  cli.py         Main entrypoint
-  lib/           Core modules
-  slurm/         HPC job submission helpers
-  tools/         Utility scripts (setup-design, etc.)
-website/         Generated dashboard (index.html)
-.automation.yaml Central configuration
+agents/           AI agent prompts and memory
+  Orchestrator/
+  Architect/
+  Designer/
+  Reviewer/
+  Builder/
+baseline/         Starting implementation — bootstrapped into every new design
+infra/            Shared stable code (dataset utils, metrics, logging)
+runs/             Live experiment tracker (ideas, designs, statuses)
+scripts/
+  cli.py          Main CLI entrypoint
+  lib/            Core automation modules
+  slurm/          HPC job submission scripts
+setup/            Agent prompts for initial project setup
+website/          Generated results dashboard
+.automation.yaml  Project configuration
 ```
 
-## Setup
+---
 
-Setup is handled by the **Setup Agent** (`setup/Setup_Agent.md`). Spawn it and give it one thing:
-
-- **Path to your project directory**
-
-The Setup Agent explores the project, writes a structured overview to `docs/project_overview.md`, then spawns two specialist sub-agents in parallel:
-
-- **Prompt Updater** (`setup/Prompt_Updater_Agent.md`) — adapts all agent prompts to the target project's vocabulary, metrics, and file conventions.
-- **Infra and Baseline Builder** (`setup/Infra_Baseline_Agent.md`) — writes, tests, and documents `infra/` and `baseline/` code.
-
-The Setup Agent then validates the full pipeline end-to-end and hands off. If anything is ambiguous, it asks you directly before proceeding.
-
-## Core Commands
+## All CLI Commands
 
 ```bash
-python scripts/cli.py sync-status              # sync idea/design statuses from filesystem signals
-python scripts/cli.py summarize-results        # aggregate metrics.csv files into results.csv
-python scripts/cli.py setup-design <src> <dst> # bootstrap a new design from baseline or a prior design
+python scripts/cli.py sync-status              # derive and update all statuses
+python scripts/cli.py summarize-results        # aggregate metrics into results.csv
+python scripts/cli.py setup-design <src> <dst> # bootstrap a new design from a source
 python scripts/cli.py submit-test <design_dir> # submit a sanity test job
-python scripts/cli.py submit-implemented       # submit all Implemented designs for full training
+python scripts/cli.py submit-implemented       # submit all Implemented designs
 python scripts/cli.py build-dashboard          # generate website/index.html
-python scripts/cli.py deploy-dashboard         # push dashboard to gh-pages branch
+python scripts/cli.py deploy-dashboard         # push dashboard to gh-pages
 python scripts/cli.py update-all               # sync + build + deploy in one step
 ```
-
-## Status Model
-
-Statuses are derived automatically by `sync-status` — never edit CSVs by hand.
-
-**Design statuses** (in progression):
-
-| Status | Meaning |
-|---|---|
-| `Not Implemented` | Design approved, implementation not ready |
-| `Implemented` | Code approved, ready for full submission |
-| `Submitted` | Job submitted, metrics not yet present |
-| `Training` | Metrics present, completion criterion not reached |
-| `Done` | Completion criterion reached (`status.done_epoch`) |
-
-**Idea statuses** are derived from the aggregate of its designs:
-
-| Status | Meaning |
-|---|---|
-| `Not Designed` | Expected designs not fully drafted/approved |
-| `Designed` | All designs exist, implementation not complete |
-| `Implemented` | All designs at least implemented |
-| `Training` | All designs in training/done |
-| `Done` | All designs done |
-
-## Design Principles
-
-- Explicit CLI operations over hidden automation or hooks
-- Strong separation of responsibilities between agents
-- Reproducible experiment bookkeeping
-- Minimal assumptions about model stack or compute backend
-- Easy migration across projects via config and prompt edits only
