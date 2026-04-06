@@ -6,6 +6,14 @@ You bring a training codebase. The agents handle the rest.
 
 ---
 
+## Demo
+
+**[AutoSapiens](https://yanghangai.github.io/autosapiens/)** — a live example of this framework applied to human pose estimation research on the [Sapiens](https://github.com/facebookresearch/sapiens) model.
+
+The agents autonomously explored 5 research directions (RGB-D fusion, kinematic attention masking, curriculum loss weighting, layer-wise learning rate decay, depth-aware positional embeddings) across 20+ design variants. The best result — layer-wise learning rate decay — reduced validation MPJPE from 142.5 to ~130, a ~9% improvement over baseline.
+
+---
+
 ## What It Does
 
 ML research is repetitive: come up with an idea, implement it, run it, check results, repeat. This framework delegates that loop to a team of AI agents that collaborate through a structured workflow:
@@ -43,7 +51,7 @@ No dependencies beyond the Python standard library (plus `pytest` to run tests).
 
 ### 2. Run the Setup Agent
 
-Open Claude Code in this repository. Enable **bypass mode** (press `Shift+Tab` to cycle to it) so the agent can read and write files without interruption.
+Open Claude Code in this repository. Enable **bypass mode** (ask claude to do it for you) so the agent can read and write files without interruption.
 
 Then tell it to act as the Setup Agent:
 
