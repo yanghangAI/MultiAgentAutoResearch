@@ -51,10 +51,9 @@ class DesignRecord:
     status: str
 
 
-@dataclass(frozen=True)
+@dataclass
 class ResultRecord:
     idea_id: str
     design_id: str
     epoch: str
-    train_mpjpe_weighted: str
-    val_mpjpe_weighted: str
+    metrics: dict[str, str]

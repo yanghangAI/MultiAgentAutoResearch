@@ -192,7 +192,7 @@ def test_build_dashboard_renders_expected_content(tmp_path: Path) -> None:
     build_dashboard(root=tmp_path)
 
     html = (tmp_path / "website" / "index.html").read_text(encoding="utf-8")
-    assert "Experiment Dashboard" in html
+    assert "Multi-Agent Auto Research" in html
     assert "idea001" in html
     assert "9.00" in html
 

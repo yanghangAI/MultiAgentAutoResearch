@@ -5,7 +5,7 @@ from pathlib import Path
 
 from scripts.lib import layout, results as results_service, store
 from scripts.lib.models import Status
-from scripts.lib.project_config import load_project_config
+from scripts.lib.project_config import ProjectConfig, load_project_config
 
 
 IDEA_HEADERS = ["Idea_ID", "Idea_Name", "Status"]
@@ -25,9 +25,9 @@ def get_expected_designs(idea_id: str, root: Path | None = None) -> int | None:
 def add_idea(idea_id: str, idea_name: str, status: str = Status.NOT_DESIGNED, root: Path | None = None) -> None:
     csv_path = layout.idea_csv_path(root)
     store.ensure_csv(csv_path, IDEA_HEADERS)
-    rows = store.read_csv_rows(csv_path)
-    for row in rows[1:]:
-        if row and row[0] == idea_id:
+    rows = store.read_dict_rows(csv_path)
+    for row in rows:
+        if row.get("Idea_ID") == idea_id:
             print(f"Idea {idea_id} already exists.")
             return
     store.append_csv_row(csv_path, [idea_id, idea_name, status])
@@ -37,16 +37,16 @@ def add_idea(idea_id: str, idea_name: str, status: str = Status.NOT_DESIGNED, ro
 def update_idea(idea_id: str, status: str, root: Path | None = None) -> None:
     csv_path = layout.idea_csv_path(root)
     store.ensure_csv(csv_path, IDEA_HEADERS)
-    rows = store.read_csv_rows(csv_path)
+    rows = store.read_dict_rows(csv_path)
     updated = False
     for row in rows:
-        if row and row[0] == idea_id:
-            row[2] = status
+        if row.get("Idea_ID") == idea_id:
+            row["Status"] = status
             updated = True
     if not updated:
         print(f"Idea {idea_id} not found.")
         return
-    store.write_csv_rows(csv_path, rows)
+    store.write_dict_rows(csv_path, IDEA_HEADERS, rows)
     print(f"Updated idea {idea_id} to '{status}'.")
 
 
@@ -59,9 +59,9 @@ def add_design(
 ) -> None:
     csv_path = layout.design_csv_path(idea_id, root)
     store.ensure_csv(csv_path, DESIGN_HEADERS)
-    rows = store.read_csv_rows(csv_path)
-    for row in rows[1:]:
-        if row and row[0] == design_id:
+    rows = store.read_dict_rows(csv_path)
+    for row in rows:
+        if row.get("Design_ID") == design_id:
             print(f"Design {design_id} already exists in {idea_id}.")
             return
     store.append_csv_row(csv_path, [design_id, description, status])
@@ -73,20 +73,20 @@ def update_design(idea_id: str, design_id: str, status: str, root: Path | None =
     if not csv_path.exists():
         print(f"CSV {csv_path} not found.")
         return
-    rows = store.read_csv_rows(csv_path)
+    rows = store.read_dict_rows(csv_path)
     updated = False
     changed = False
     for row in rows:
-        if row and row[0] == design_id:
-            if len(row) > 2 and row[2] != status:
-                row[2] = status
+        if row.get("Design_ID") == design_id:
+            if row.get("Status") != status:
+                row["Status"] = status
                 changed = True
             updated = True
     if not updated:
         print(f"Design {design_id} not found in {idea_id}.")
         return
     if changed:
-        store.write_csv_rows(csv_path, rows)
+        store.write_dict_rows(csv_path, DESIGN_HEADERS, rows)
         print(f"Updated design {design_id} in {idea_id} to '{status}'.")
 
 
@@ -102,37 +102,37 @@ def update_both(
 
 
 def get_idea_status(idea_id: str, root: Path | None = None) -> str | None:
-    rows = store.read_csv_rows(layout.idea_csv_path(root))
+    rows = store.read_dict_rows(layout.idea_csv_path(root))
     if not rows:
         print(f"CSV {layout.idea_csv_path(root)} not found.")
         return None
     for row in rows:
-        if row and row[0] == idea_id:
-            print(row[2])
-            return row[2]
+        if row.get("Idea_ID") == idea_id:
+            print(row.get("Status", ""))
+            return row.get("Status")
     print(f"Idea {idea_id} not found.")
     return None
 
 
 def get_design_status(idea_id: str, design_id: str, root: Path | None = None) -> str | None:
     csv_path = layout.design_csv_path(idea_id, root)
-    rows = store.read_csv_rows(csv_path)
+    rows = store.read_dict_rows(csv_path)
     if not rows:
         print(f"CSV {csv_path} not found.")
         return None
     for row in rows:
-        if row and row[0] == design_id:
-            print(row[2])
-            return row[2]
+        if row.get("Design_ID") == design_id:
+            print(row.get("Status", ""))
+            return row.get("Status")
     print(f"Design {design_id} not found in {idea_id}.")
     return None
 
 
 def get_ideas_by_status(status: str, root: Path | None = None) -> list[str]:
     found = [
-        row[0]
-        for row in store.read_csv_rows(layout.idea_csv_path(root))
-        if row and len(row) > 2 and row[2] == status
+        row["Idea_ID"]
+        for row in store.read_dict_rows(layout.idea_csv_path(root))
+        if row.get("Status") == status and row.get("Idea_ID")
     ]
     if found:
         print("\n".join(found))
@@ -144,9 +144,9 @@ def get_ideas_by_status(status: str, root: Path | None = None) -> list[str]:
 def get_designs_by_status(idea_id: str, status: str, root: Path | None = None) -> list[str]:
     csv_path = layout.design_csv_path(idea_id, root)
     found = [
-        row[0]
-        for row in store.read_csv_rows(csv_path)
-        if row and len(row) > 2 and row[2] == status
+        row["Design_ID"]
+        for row in store.read_dict_rows(csv_path)
+        if row.get("Status") == status and row.get("Design_ID")
     ]
     if found:
         print("\n".join(found))
@@ -165,8 +165,10 @@ def derive_design_status(
     design_id: str,
     root: Path | None = None,
     results_index: dict[tuple[str, str], dict[str, str]] | None = None,
+    cfg: ProjectConfig | None = None,
 ) -> str | None:
-    cfg = load_project_config(root)
+    if cfg is None:
+        cfg = load_project_config(root)
     if results_index is None:
         results_index = load_results_index(root)
     row = results_index.get((idea_id, design_id))
@@ -191,23 +193,23 @@ def derive_design_status(
 
 
 def derive_idea_status(idea_id: str, root: Path | None = None) -> str | None:
-    rows = store.read_csv_rows(layout.design_csv_path(idea_id, root))
-    if len(rows) <= 1:
+    rows = store.read_dict_rows(layout.design_csv_path(idea_id, root))
+    if not rows:
         return None
-    current_designs = len(rows) - 1
+    current_designs = len(rows)
     expected_designs = get_expected_designs(idea_id, root)
     has_all_designs = expected_designs is None or current_designs >= expected_designs
 
-    statuses = [row[2] for row in rows[1:] if len(row) > 2]
+    statuses = [row["Status"] for row in rows if row.get("Status")]
     if not has_all_designs:
         return Status.NOT_DESIGNED
-    if statuses and all(status == Status.DONE for status in statuses):
+    if statuses and all(s == Status.DONE for s in statuses):
         return Status.DONE
-    if statuses and all(status in {Status.TRAINING, Status.DONE} for status in statuses):
+    if statuses and all(s in {Status.TRAINING, Status.DONE} for s in statuses):
         return Status.TRAINING
     if statuses and all(
-        status in {Status.IMPLEMENTED, Status.SUBMITTED, Status.TRAINING, Status.DONE}
-        for status in statuses
+        s in {Status.IMPLEMENTED, Status.SUBMITTED, Status.TRAINING, Status.DONE}
+        for s in statuses
     ):
         return Status.IMPLEMENTED
     return Status.DESIGNED
@@ -218,12 +220,14 @@ def auto_update_status(
     design_id: str,
     root: Path | None = None,
     results_index: dict[tuple[str, str], dict[str, str]] | None = None,
+    cfg: ProjectConfig | None = None,
 ) -> None:
     design_status = derive_design_status(
         idea_id,
         design_id,
         root=root,
         results_index=results_index,
+        cfg=cfg,
     )
     if design_status:
         update_design(idea_id, design_id, design_status, root=root)
@@ -237,29 +241,31 @@ def sync_all(root: Path | None = None) -> None:
     print("Running summarize_results...")
     results_service.summarize_results(root=root)
 
-    idea_rows = store.read_csv_rows(layout.idea_csv_path(root))
-    if len(idea_rows) <= 1:
+    idea_rows = store.read_dict_rows(layout.idea_csv_path(root))
+    if not idea_rows:
         print("No ideas to sync.")
         return
 
+    cfg = load_project_config(root)
     results_index = load_results_index(root)
-    for idea_row in idea_rows[1:]:
-        if not idea_row:
+    for idea_row in idea_rows:
+        idea_id = idea_row.get("Idea_ID", "")
+        if not idea_id:
             continue
-        idea_id = idea_row[0]
-        if len(idea_row) > 2 and idea_row[2] == Status.DONE:
+        if idea_row.get("Status") == Status.DONE:
             continue
-        design_rows = store.read_csv_rows(layout.design_csv_path(idea_id, root))
-        for design_row in design_rows[1:]:
-            if not design_row:
+        design_rows = store.read_dict_rows(layout.design_csv_path(idea_id, root))
+        for design_row in design_rows:
+            design_id = design_row.get("Design_ID", "")
+            if not design_id:
                 continue
-            design_id = design_row[0]
-            if len(design_row) > 2 and design_row[2] == Status.DONE:
+            if design_row.get("Status") == Status.DONE:
                 continue
             auto_update_status(
                 idea_id,
                 design_id,
                 root=root,
                 results_index=results_index,
+                cfg=cfg,
             )
     print("Sync complete.")

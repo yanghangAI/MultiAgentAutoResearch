@@ -15,7 +15,6 @@ What it does:
 """
 
 import argparse
-import csv
 import re
 import shutil
 import sys
@@ -25,25 +24,13 @@ from pathlib import Path
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from scripts.lib.layout import parse_design_ref, resolve_code_dir  # noqa: E402
+from scripts.lib import store  # noqa: E402
+from scripts.lib.layout import design_csv_path, parse_design_ref, resolve_code_dir  # noqa: E402
 from scripts.lib.models import ALLOWED_BOOTSTRAP_SOURCE_STATUSES  # noqa: E402
 from scripts.lib.project_config import load_project_config  # noqa: E402
 
 
-def _read_design_status(repo_root: Path, idea_id: str, design_id: str):
-    design_csv = repo_root / "runs" / idea_id / "design_overview.csv"
-    if not design_csv.exists():
-        raise SystemExit(f"Error: missing design overview CSV: {design_csv}")
-    with design_csv.open("r", newline="", encoding="utf-8") as f:
-        rows = csv.reader(f)
-        next(rows, None)  # header
-        for row in rows:
-            if row and row[0] == design_id:
-                return row[2] if len(row) > 2 else ""
-    raise SystemExit(f"Error: {design_id} not found in {design_csv}")
-
-
-def _validate_source_status(src: Path, repo_root: Path):
+def _validate_source_status(src: Path, repo_root: Path) -> None:
     """
     Enforce that design-to-design bootstrapping only uses implemented (or later) sources.
     baseline/ is always allowed.
@@ -52,7 +39,14 @@ def _validate_source_status(src: Path, repo_root: Path):
     if not ref:
         return
     idea_id, design_id = ref
-    status = _read_design_status(repo_root, idea_id, design_id)
+    csv_path = design_csv_path(idea_id, root=repo_root)
+    if not csv_path.exists():
+        raise SystemExit(f"Error: missing design overview CSV: {csv_path}")
+    rows = store.read_dict_rows(csv_path)
+    matched = next((row for row in rows if row.get("Design_ID") == design_id), None)
+    if matched is None:
+        raise SystemExit(f"Error: {design_id} not found in {csv_path}")
+    status = matched.get("Status", "")
     if status not in ALLOWED_BOOTSTRAP_SOURCE_STATUSES:
         allowed = ", ".join(sorted(ALLOWED_BOOTSTRAP_SOURCE_STATUSES))
         raise SystemExit(

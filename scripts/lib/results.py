@@ -27,18 +27,12 @@ def parse_metrics_file(metrics_path: Path, root: Path | None = None) -> ResultRe
     if all(value is None for value in metric_values):
         return None
     idea_id, design_id = layout.parse_idea_design_from_metrics(metrics_path)
-    train_metric = last_row.get(cfg.results.metric_fields[0], "") if cfg.results.metric_fields else ""
-    val_metric = (
-        last_row.get(cfg.results.metric_fields[1], "")
-        if len(cfg.results.metric_fields) > 1
-        else ""
-    )
+    metrics = {field: last_row.get(field, "") for field in cfg.results.metric_fields}
     return ResultRecord(
         idea_id=idea_id,
         design_id=design_id,
         epoch=last_row.get("epoch", ""),
-        train_mpjpe_weighted=train_metric or "",
-        val_mpjpe_weighted=val_metric or "",
+        metrics=metrics,
     )
 
 
@@ -61,16 +55,7 @@ def summarize_results(root: Path | None = None) -> list[ResultRecord]:
             "idea_id": record.idea_id,
             "design_id": record.design_id,
             "epoch": record.epoch,
-            **(
-                {cfg.results.metric_fields[0]: record.train_mpjpe_weighted}
-                if cfg.results.metric_fields
-                else {}
-            ),
-            **(
-                {cfg.results.metric_fields[1]: record.val_mpjpe_weighted}
-                if len(cfg.results.metric_fields) > 1
-                else {}
-            ),
+            **record.metrics,
         }
         for record in records
     ]

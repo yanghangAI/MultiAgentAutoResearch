@@ -4,23 +4,20 @@ from html import escape
 from pathlib import Path
 
 from scripts.lib import layout, store
-from scripts.lib.project_config import load_project_config
+from scripts.lib.project_config import ProjectConfig, load_project_config
 
 
-def is_baseline_result(idea_id: str, design_id: str, root: Path | None = None) -> bool:
-    cfg = load_project_config(root)
+def _is_baseline_result(cfg: ProjectConfig, idea_id: str, design_id: str) -> bool:
     return (idea_id, design_id) in set(cfg.dashboard.baseline_results)
 
 
-def github_blob_url(*parts: str, root: Path | None = None) -> str:
-    cfg = load_project_config(root)
+def _github_blob_url(cfg: ProjectConfig, *parts: str) -> str:
     if not cfg.dashboard.github_repo_url:
         return "#"
     return f"{cfg.dashboard.github_repo_url}/blob/main/" + "/".join(parts)
 
 
-def github_tree_url(*parts: str, root: Path | None = None) -> str:
-    cfg = load_project_config(root)
+def _github_tree_url(cfg: ProjectConfig, *parts: str) -> str:
     if not cfg.dashboard.github_repo_url:
         return "#"
     return f"{cfg.dashboard.github_repo_url}/tree/main/" + "/".join(parts)
@@ -43,8 +40,9 @@ def idea_excerpt(path: Path, limit: int = 200) -> str:
 def build_context(root: Path | None = None) -> dict[str, object]:
     root_path = layout.repo_root(root)
     cfg = load_project_config(root_path)
-    metric_1 = cfg.results.metric_fields[0] if cfg.results.metric_fields else "metric_1"
-    metric_2 = cfg.results.metric_fields[1] if len(cfg.results.metric_fields) > 1 else "metric_2"
+    metric_fields = cfg.results.metric_fields
+    metric_1 = metric_fields[0] if metric_fields else "metric_1"
+    metric_2 = metric_fields[1] if len(metric_fields) > 1 else "metric_2"
     ideas = read_csv(layout.idea_csv_path(root_path))
     results = read_csv(layout.results_csv_path(root_path))
 
@@ -61,9 +59,9 @@ def build_context(root: Path | None = None) -> dict[str, object]:
                 "metric_2_value": row.get(metric_2, "0"),
                 "metric_1_name": metric_1,
                 "metric_2_name": metric_2,
-                "is_baseline": is_baseline_result(idea_id, design_id, root=root_path),
-                "idea_url": github_blob_url("runs", idea_id, "idea.md", root=root_path),
-                "design_url": github_blob_url("runs", idea_id, design_id, "design.md", root=root_path),
+                "is_baseline": _is_baseline_result(cfg, idea_id, design_id),
+                "idea_url": _github_blob_url(cfg, "runs", idea_id, "idea.md"),
+                "design_url": _github_blob_url(cfg, "runs", idea_id, design_id, "design.md"),
             }
         )
 
@@ -75,8 +73,8 @@ def build_context(root: Path | None = None) -> dict[str, object]:
                 "idea_id": idea_id,
                 "idea_name": idea.get("Idea_Name", ""),
                 "status": idea.get("Status", ""),
-                "idea_url": github_blob_url("runs", idea_id, "idea.md", root=root_path),
-                "tree_url": github_tree_url("runs", idea_id, root=root_path),
+                "idea_url": _github_blob_url(cfg, "runs", idea_id, "idea.md"),
+                "tree_url": _github_tree_url(cfg, "runs", idea_id),
                 "excerpt": idea_excerpt(layout.idea_md_path(idea_id, root_path)),
             }
         )
