@@ -43,7 +43,9 @@ No dependencies beyond the Python standard library (plus `pytest` to run tests).
 
 ### 2. Run the Setup Agent
 
-Open Claude Code in this repository, then tell it to act as the Setup Agent:
+Open Claude Code in this repository. Enable **bypass mode** (press `Shift+Tab` to cycle to it) so the agent can read and write files without interruption.
+
+Then tell it to act as the Setup Agent:
 
 > "Read `setup/Setup_Agent.md` and act as the Setup Agent. Set up this repo for my project at `/path/to/my/project`"
 
