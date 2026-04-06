@@ -43,11 +43,11 @@ No dependencies beyond the Python standard library (plus `pytest` to run tests).
 
 ### 2. Run the Setup Agent
 
-Point the **Setup Agent** (`setup/Setup_Agent.md`) at your project:
+Open Claude Code in this repository, then tell it to act as the Setup Agent:
 
-> "Set up this repo for my project at `/path/to/my/project`"
+> "Read `setup/Setup_Agent.md` and act as the Setup Agent. Set up this repo for my project at `/path/to/my/project`"
 
-That's it. The Setup Agent:
+Claude Code will take it from there. The Setup Agent:
 - Reads your training code to understand metrics, config, and runtime environment
 - Asks you clarifying questions if anything is ambiguous
 - Configures `.automation.yaml` for your project
@@ -57,9 +57,9 @@ That's it. The Setup Agent:
 
 ### 3. Start the research loop
 
-Spawn the **Orchestrator** (`agents/Orchestrator/prompt.md`) and let it run:
+In Claude Code, tell it to act as the Orchestrator:
 
-> "Start the research loop"
+> "Read `agents/Orchestrator/prompt.md` and act as the Orchestrator. Start the research loop."
 
 The Orchestrator spawns the Architect, which reads prior results and proposes ideas. From there the loop runs autonomously — designing, implementing, reviewing, submitting — and surfaces results in the dashboard.
 
