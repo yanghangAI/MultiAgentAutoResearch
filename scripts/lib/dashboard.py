@@ -184,6 +184,9 @@ def render_dashboard(context: dict[str, object]) -> str:
 
     html += """        </div>
     </div>
+    <footer class="text-center text-muted py-4 mt-4 border-top">
+        <small>Powered by <a href="https://github.com/yanghangAI/MultiAgentAutoResearch" target="_blank">Multi-Agent Auto Research</a></small>
+    </footer>
     <script>
     function sortTable(n) {
       var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
