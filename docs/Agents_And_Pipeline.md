@@ -16,7 +16,7 @@
 
 **4. Builder (The Software Engineer)**
 * **Role:** The PyTorch implementation layer.
-* **Responsibilities:** Takes a finalized `design.md` and writes/modifies the Python training loop (`train.py`) to match it. It is responsible for making sure the code runs by executing local 2-epoch test runs (`submit_test.sh`) to ensure there are no immediate code/OOM crashes before requesting a code review.
+* **Responsibilities:** Takes a finalized `design.md` and writes/modifies the Python training loop (`train.py`) to match it. It is responsible for making sure the code runs by executing local 2-epoch test runs (`python scripts/cli.py submit-test <design_dir>`) to ensure there are no immediate code/OOM crashes before requesting a code review.
 
 **5. Reviewer (The Strict Gatekeeper)**
 * **Role:** The dedicated auditor for both designs and code.
@@ -32,17 +32,17 @@ To eliminate the need for an LLM to actively wait for jobs to finish or manually
 
 **1. Agent Hooks (Post-Action Automation)**
 * **What it does:** Every time an agent finishes a step (e.g., writes a file), the agent framework (like Claude Code) triggers a local background bash hook.
-* **Scripts executed:** `python scripts/tracker.py sync_all && ./scripts/auto_submit.sh`
-* **Purpose:** Immediately syncs `design_overview.csv` with the filesystem reality. If the Reviewer just approved a code implementation, `sync_all` marks it "Implemented". Then, `auto_submit.sh` instantly sweeps the CSVs, finds the newly "Implemented" design, and submits it to SLURM (capping at 30 concurrent jobs) before the agent even takes its next breath.
+* **Scripts executed:** `python scripts/cli.py sync-status && python scripts/cli.py submit-implemented`
+* **Purpose:** Immediately syncs `design_overview.csv` with the filesystem reality. If the Reviewer just approved a code implementation, `sync-status` marks it "Implemented". Then, `submit-implemented` instantly sweeps the CSVs, finds the newly "Implemented" design, and submits it to SLURM (capping at 30 concurrent jobs) before the agent even takes its next breath.
 
 **2. The Crontab (Periodic Cluster Synchronization)**
 * **What it does:** A scheduled Linux daemon running every 15 minutes in the background.
-* **Scripts executed:** `./scripts/run_summarize.sh && python scripts/tracker.py sync_all && ./scripts/auto_submit.sh`
-* **Purpose:** The bridge between the disconnected SLURM cluster and the tracked CSV state. Since the LLM agents do not wait for the 48-hour trainings to finish, the Cron Job wakes up periodically to extract final MPJPE metrics from completed `slurm_*.out` logs, writes them to `results.csv`, marks the designs as `Done`, and backfills the cluster queue with any pending `Implemented` jobs.
+* **Scripts executed:** `python scripts/cli.py summarize-results && python scripts/cli.py sync-status && python scripts/cli.py submit-implemented`
+* **Purpose:** The bridge between the disconnected SLURM cluster and the tracked CSV state. Since the LLM agents do not wait for the 48-hour trainings to finish, the Cron Job wakes up periodically to extract final MPJPE metrics from completed runs, writes them to `results.csv`, marks the designs as `Done`, and backfills the cluster queue with any pending `Implemented` jobs.
 
 **3. Git Hooks (`post-commit`)**
 * **What it does:** Triggers on any `git commit`. 
-* **Scripts executed:** `./scripts/update_all.sh` (triggering generation of `website/index.html` and deployment).
+* **Scripts executed:** `python scripts/cli.py update-all` (triggering generation of `website/index.html` and deployment).
 * **Purpose:** Ensures the frontend UX tracking dashboard hosted on `gh-pages` is always perfectly synchronized with the repository's main branch data.
 
 ---
@@ -51,7 +51,7 @@ To eliminate the need for an LLM to actively wait for jobs to finish or manually
 
 1. **Ideation:** The **Orchestrator** spawns the **Architect**, who proposes a new research 'Idea' based on past results and states how many variations to explore.
 2. **Drafting:** The Orchestrator delegates the idea to the **Designer**, who writes specific math and parameter configurations for a variation (`design.md`).
-3. **Design Review:** The Orchestrator passes the `design.md` path to the **Reviewer**. If rejected, it goes back to the Designer. If approved, the design is officially accepted. The automated Agent Hook runs `sync_all` marking it "Not Implemented," allowing the Designer to move on to the next variation.
-4. **Implementation:** The Orchestrator spawns the **Builder** to tackle an approved design. It writes `train.py` and actively runs a 2-epoch sanity test (`submit_test.sh`).
-5. **Code Audit:** The Builder asks the Orchestrator for a review. The Orchestrator spawns the **Reviewer** to check `train.py` against `design.md`. If approved, the agent hook runs `sync_all` and immediately fires `auto_submit.sh`, putting the job in the SLURM queue.
+3. **Design Review:** The Orchestrator passes the `design.md` path to the **Reviewer**. If rejected, it goes back to the Designer. If approved, the design is officially accepted. The automated Agent Hook runs `sync-status`, marking it "Not Implemented," allowing the Designer to move on to the next variation.
+4. **Implementation:** The Orchestrator spawns the **Builder** to tackle an approved design. It writes `train.py` and actively runs a 2-epoch sanity test (`python scripts/cli.py submit-test <design_dir>`).
+5. **Code Audit:** The Builder asks the Orchestrator for a review. The Orchestrator spawns the **Reviewer** to check `train.py` against `design.md`. If approved, the agent hook runs `sync-status` and immediately fires `submit-implemented`, putting the job in the SLURM queue.
 6. **Execution (Asynchronous):** The AI agents move on to new tasks. Behind the scenes, the **Crontab** monitors the jobs. Once training completes, the Crontab pulls the metrics, updates the tracker to `Done`, and frees up the queue slot.

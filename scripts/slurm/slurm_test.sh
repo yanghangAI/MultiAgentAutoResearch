@@ -11,7 +11,7 @@ set -u
 
 # The first argument is the design folder (containing code/ subfolder), defaults to current directory
 TARGET_DIR=${1:-$PWD}
-ROOT_DIR=$(dirname "$(dirname "$(realpath "$0")")")
+ROOT_DIR=$(dirname "$(dirname "$(dirname "$(realpath "$0")")")")
 
 cd "$TARGET_DIR/code" || exit 1
 
@@ -21,6 +21,7 @@ conda activate hang
 echo "[test] Running train.py in $TARGET_DIR with 2 train seqs, 1 val seq, for 2 epochs."
 
 export PYTHONPATH="$ROOT_DIR:${PYTHONPATH:-}"
+export ROOT_DIR
 
 python - <<'PY'
 import sys
@@ -28,7 +29,7 @@ import os
 
 sys.path.insert(0, os.getcwd())
 # Ensure the root auto/ path is in sys.path to find infra.py
-sys.path.insert(0, "/work/pi_nwycoff_umass_edu/hang/auto")
+sys.path.insert(0, os.environ["ROOT_DIR"])
 import config
 import train
 

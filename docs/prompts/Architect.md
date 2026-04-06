@@ -14,7 +14,7 @@ Before designing the search space, read the following files thoroughly:
 Identify what design decisions are currently hardcoded in your chosen baseline (architecture, fusion strategy, loss, input representation, etc.) and consider which of them could reasonably be varied.
 
 **Step 2 — Broader Reflection on Past Experiments.**
-Before proposing new ideas, you must reflect on the trajectory of the project. Read `runs/idea_overview.csv` to understand what ideas have already been proposed, ensuring you do not generate duplicates. Run `./scripts/run_summarize.sh` in the terminal to generate or update `results.csv`. Then, carefully read `results.csv` to analyze the performance (e.g., `val_mpjpe_weighted`) of previous ideas and designs.
+Before proposing new ideas, you must reflect on the trajectory of the project. Read `runs/idea_overview.csv` to understand what ideas have already been proposed, ensuring you do not generate duplicates. Run `python scripts/cli.py summarize-results` in the terminal to generate or update `results.csv`. Then, carefully read `results.csv` to analyze the performance (e.g., `val_mpjpe_weighted`) of previous ideas and designs.
 Synthesize these findings: Which architectural changes improved the MPJPE? Which resulted in poor convergence or OOM errors? Use this broader reflection to explicitly identify promising directions to double-down on and dead-ends to avoid. Write down your reflections quietly in your memory before proceeding.
 
 **Step 3 — Propose your own design axes.**

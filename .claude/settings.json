@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "allowedPaths": ["/work/pi_nwycoff_umass_edu/hang/auto"]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /work/pi_nwycoff_umass_edu/hang/auto && python scripts/cli.py sync-status && python scripts/cli.py submit-implemented 2>/dev/null || true",
+            "statusMessage": "Syncing tracker and submitting..."
+          }
+        ]
+      }
+    ]
+  }
+}

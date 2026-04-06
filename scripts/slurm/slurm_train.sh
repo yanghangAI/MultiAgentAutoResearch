@@ -1,5 +1,4 @@
 #!/bin/bash
-#!/bin/bash
 #SBATCH --partition=gpu
 #SBATCH --constraint=1080ti
 #SBATCH --gres=gpu:1
@@ -9,11 +8,11 @@
 #SBATCH --output=slurm_%j.out
 
 # Usage (called by run_trials.py):
-#   sbatch --job-name=<idea_num>-<design_num> --time=48:00:00 -o <log_file> --export=ALL,TRAIN_PY=<path> scripts/slurm_train.sh
+#   sbatch --job-name=<idea_num>-<design_num> --time=48:00:00 -o <log_file> --export=ALL,TRAIN_PY=<path> scripts/slurm/slurm_train.sh
 
 set -u
 
-ROOT_DIR="$(dirname "$(dirname "$(realpath "$0")")")"
+ROOT_DIR="$(dirname "$(dirname "$(dirname "$(realpath "$0")")")")"
 
 module load conda/latest
 conda activate hang

@@ -9,8 +9,8 @@ Create the file `.git/hooks/post-commit` with this exact content:
 if [ "$_IN_POST_COMMIT" = "1" ]; then exit 0; fi
 export _IN_POST_COMMIT=1
 
-if [ -f "scripts/update_all.sh" ]; then
-    flock -w 300 /tmp/sapiens_pipeline.lock -c "./scripts/update_all.sh"
+if [ -f "scripts/cli.py" ]; then
+    flock -w 300 /tmp/sapiens_pipeline.lock -c "python scripts/cli.py update-all"
 fi
 ```
 Then, run `chmod +x .git/hooks/post-commit` in the terminal to make it executable.
@@ -19,7 +19,7 @@ Then, run `chmod +x .git/hooks/post-commit` in the terminal to make it executabl
 
 **Goal:** After every file write or edit, automatically run a concurrency-safe wrapper:
 ```bash
-cd /work/pi_nwycoff_umass_edu/hang/auto && flock -n /tmp/sapiens_pipeline.lock -c "python scripts/tracker.py sync_all && ./scripts/auto_submit.sh" 2>/dev/null || true
+cd /work/pi_nwycoff_umass_edu/hang/auto && flock -n /tmp/sapiens_pipeline.lock -c "python scripts/cli.py sync-status && python scripts/cli.py submit-implemented" 2>/dev/null || true
 ```
 
 This must be triggered by the agent harness/runtime — not by the agent itself — so it fires reliably regardless of agent behavior.
@@ -36,7 +36,7 @@ Use whichever mechanism your agent CLI supports:
         "hooks": [
           {
             "type": "command",
-            "command": "cd /work/pi_nwycoff_umass_edu/hang/auto && flock -n /tmp/sapiens_pipeline.lock -c \"python scripts/tracker.py sync_all && ./scripts/auto_submit.sh\" 2>/dev/null || true",
+            "command": "cd /work/pi_nwycoff_umass_edu/hang/auto && flock -n /tmp/sapiens_pipeline.lock -c \"python scripts/cli.py sync-status && python scripts/cli.py submit-implemented\" 2>/dev/null || true",
             "statusMessage": "Syncing tracker and submitting..."
           }
         ]
@@ -56,7 +56,7 @@ jq -e '.hooks.PostToolUse[] | select(.matcher == "Write|Edit") | .hooks[] | sele
 ```bash
 # Run in background; watches for file changes and triggers the sync
 while inotifywait -r -e close_write /work/pi_nwycoff_umass_edu/hang/auto --exclude '\.git'; do
-    cd /work/pi_nwycoff_umass_edu/hang/auto && flock -n /tmp/sapiens_pipeline.lock -c "python scripts/tracker.py sync_all && ./scripts/auto_submit.sh"
+    cd /work/pi_nwycoff_umass_edu/hang/auto && flock -n /tmp/sapiens_pipeline.lock -c "python scripts/cli.py sync-status && python scripts/cli.py submit-implemented"
 done
 ```
 
@@ -66,5 +66,5 @@ You cannot edit the user's crontab directly. Send a direct message to the user c
 ```text
 Your Git post-commit hook and agent post-action hooks are successfully configured!
 To set up the periodic scheduled hook for the SLURM cluster, please run `crontab -e` in your terminal and add this line:
-0 * * * * cd /work/pi_nwycoff_umass_edu/hang/auto && flock -w 300 /work/pi_nwycoff_umass_edu/hang/auto/sapiens_pipeline.lock -c "./scripts/run_summarize.sh && python scripts/tracker.py sync_all && ./scripts/auto_submit.sh" >> /work/pi_nwycoff_umass_edu/hang/auto/cron_hook.log 2>&1
+0 * * * * cd /work/pi_nwycoff_umass_edu/hang/auto && flock -w 300 /work/pi_nwycoff_umass_edu/hang/auto/sapiens_pipeline.lock -c "python scripts/cli.py summarize-results && python scripts/cli.py sync-status && python scripts/cli.py submit-implemented" >> /work/pi_nwycoff_umass_edu/hang/auto/cron_hook.log 2>&1
 ```
