@@ -2,6 +2,8 @@
 
 This directory contains the automation layer for tracking experiments, summarizing results, submitting jobs, and building or deploying the project dashboard.
 
+Project-specific behavior is configured in the repo-level `.automation.yaml`.
+
 ## Architecture
 
 The script system now has two layers:
@@ -36,17 +38,17 @@ python scripts/cli.py update-all
 What each command does:
 
 - `summarize-results`
-  Scans `runs/` for training `metrics.csv` files, ignores `test_output/`, and writes a consolidated `results.csv`.
+  Scans `runs/` for `metrics.csv` files using `.automation.yaml` discovery settings and writes a consolidated `results.csv`.
 - `sync-status`
   Regenerates `results.csv` and then updates idea and design statuses in the overview CSVs based on metrics, review files, and SLURM outputs.
 - `setup-design <src> <dst>`
-  Copies Python files from a baseline or prior design into `<dst>/code/` and patches `config.py` so outputs land in the destination design folder.
+  Copies files from a baseline or prior design into the destination layout according to `.automation.yaml` (`setup_design.source_globs`, destination subdir, optional output patch rule).
 - `submit-test <design_dir>`
-  Submits a short 2-epoch sanity-check SLURM job for a design and writes logs/results into `<design_dir>/test_output/`.
+  Submits a sanity-check job for a design using the configured command template and writes outputs in `<design_dir>/test_output/` by default.
 - `submit-train <train.py> [job_name]`
   Submits a full training SLURM job for a specific training script.
 - `submit-implemented`
-  Finds designs currently marked `Implemented` and submits full training jobs for them, respecting the configured job cap.
+  Finds designs currently marked `Implemented` and submits full jobs for them, respecting the configured job cap.
 - `build-dashboard`
   Reads the tracking CSVs and generates `website/index.html`.
 - `deploy-dashboard`
@@ -74,17 +76,17 @@ python scripts/cli.py update-all --allow-dirty
 - `lib/store.py`
   CSV and text file helpers.
 - `lib/results.py`
-  Metrics discovery and `results.csv` generation.
+  Metrics discovery and `results.csv` generation (config-driven metric fields).
 - `lib/status.py`
-  Idea/design status updates and sync logic.
+  Idea/design status updates and sync logic (config-driven completion threshold and approval token).
 - `lib/submit.py`
-  Test submission plus implemented-design discovery and SLURM submission flow.
+  Test submission plus implemented-design discovery and command-template-based submission flow.
 - `lib/dashboard.py`
   Dashboard data preparation and HTML rendering.
 - `lib/deploy.py`
   Git-based dashboard deployment to `gh-pages`.
 - `tools/setup_design.py`
-  Copies a baseline or prior design into a new design folder and patches `output_dir`.
+  Copies a baseline or prior design into a new design folder using configurable file patterns and optional output patching.
 - `tools/show_diff.sh`
   Diff helper for newer `code/`-based designs.
 - `tools/show_code_diff.sh`
@@ -135,7 +137,7 @@ runs/<idea_id>/<design_id>/
     config.py
 ```
 
-Submission logic prefers `code/train.py`, but still falls back to a flat `train.py` if needed for older designs.
+Submission logic prefers `code/train.py`, but still falls back to a flat `train.py` for compatibility.
 
 ## Safety Notes
 
@@ -144,6 +146,7 @@ Submission logic prefers `code/train.py`, but still falls back to a flat `train.
 - `sync-status` regenerates `results.csv` before recalculating idea and design statuses.
 - `submit-test --dry-run` previews the sanity-check SLURM submission without calling `sbatch`.
 - `submit-implemented --dry-run` is the safest way to inspect pending submissions.
+- This repo now prefers explicit agent/manual invocation of `cli.py` commands over automatic git hooks or post-write hooks.
 
 ## Testing
 

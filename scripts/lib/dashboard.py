@@ -4,24 +4,26 @@ from html import escape
 from pathlib import Path
 
 from scripts.lib import layout, store
+from scripts.lib.project_config import load_project_config
 
 
-GITHUB_REPO_URL = "https://github.com/yanghangAI/autosapiens"
+def is_baseline_result(idea_id: str, design_id: str, root: Path | None = None) -> bool:
+    cfg = load_project_config(root)
+    return (idea_id, design_id) in set(cfg.dashboard.baseline_results)
 
 
-def is_baseline_result(idea_id: str, design_id: str) -> bool:
-    return (idea_id, design_id) in {
-        ("idea001", "design001"),
-        ("idea002", "design001"),
-    }
+def github_blob_url(*parts: str, root: Path | None = None) -> str:
+    cfg = load_project_config(root)
+    if not cfg.dashboard.github_repo_url:
+        return "#"
+    return f"{cfg.dashboard.github_repo_url}/blob/main/" + "/".join(parts)
 
 
-def github_blob_url(*parts: str) -> str:
-    return f"{GITHUB_REPO_URL}/blob/main/" + "/".join(parts)
-
-
-def github_tree_url(*parts: str) -> str:
-    return f"{GITHUB_REPO_URL}/tree/main/" + "/".join(parts)
+def github_tree_url(*parts: str, root: Path | None = None) -> str:
+    cfg = load_project_config(root)
+    if not cfg.dashboard.github_repo_url:
+        return "#"
+    return f"{cfg.dashboard.github_repo_url}/tree/main/" + "/".join(parts)
 
 
 def read_csv(path: Path) -> list[dict[str, str]]:
@@ -38,8 +40,11 @@ def idea_excerpt(path: Path, limit: int = 200) -> str:
     return escape(excerpt)
 
 
-def build_context(root: Path | None = None) -> dict[str, list[dict[str, object]]]:
+def build_context(root: Path | None = None) -> dict[str, object]:
     root_path = layout.repo_root(root)
+    cfg = load_project_config(root_path)
+    metric_1 = cfg.results.metric_fields[0] if cfg.results.metric_fields else "metric_1"
+    metric_2 = cfg.results.metric_fields[1] if len(cfg.results.metric_fields) > 1 else "metric_2"
     ideas = read_csv(layout.idea_csv_path(root_path))
     results = read_csv(layout.results_csv_path(root_path))
 
@@ -52,11 +57,13 @@ def build_context(root: Path | None = None) -> dict[str, list[dict[str, object]]
                 "idea_id": idea_id,
                 "design_id": design_id,
                 "epoch": row.get("epoch", ""),
-                "train_mpjpe_weighted": row.get("train_mpjpe_weighted", "0"),
-                "val_mpjpe_weighted": row.get("val_mpjpe_weighted", "0"),
-                "is_baseline": is_baseline_result(idea_id, design_id),
-                "idea_url": github_blob_url("runs", idea_id, "idea.md"),
-                "design_url": github_blob_url("runs", idea_id, design_id, "design.md"),
+                "metric_1_value": row.get(metric_1, "0"),
+                "metric_2_value": row.get(metric_2, "0"),
+                "metric_1_name": metric_1,
+                "metric_2_name": metric_2,
+                "is_baseline": is_baseline_result(idea_id, design_id, root=root_path),
+                "idea_url": github_blob_url("runs", idea_id, "idea.md", root=root_path),
+                "design_url": github_blob_url("runs", idea_id, design_id, "design.md", root=root_path),
             }
         )
 
@@ -68,29 +75,51 @@ def build_context(root: Path | None = None) -> dict[str, list[dict[str, object]]
                 "idea_id": idea_id,
                 "idea_name": idea.get("Idea_Name", ""),
                 "status": idea.get("Status", ""),
-                "idea_url": github_blob_url("runs", idea_id, "idea.md"),
-                "tree_url": github_tree_url("runs", idea_id),
+                "idea_url": github_blob_url("runs", idea_id, "idea.md", root=root_path),
+                "tree_url": github_tree_url("runs", idea_id, root=root_path),
                 "excerpt": idea_excerpt(layout.idea_md_path(idea_id, root_path)),
             }
         )
-    return {"results": result_rows, "ideas": idea_cards}
+    return {
+        "results": result_rows,
+        "ideas": idea_cards,
+        "metric_1_name": metric_1,
+        "metric_2_name": metric_2,
+        "repo_url": cfg.dashboard.github_repo_url,
+    }
 
 
-def render_dashboard(context: dict[str, list[dict[str, object]]]) -> str:
+def render_dashboard(context: dict[str, object]) -> str:
+    metric_1_name = str(context.get("metric_1_name", "metric_1"))
+    metric_2_name = str(context.get("metric_2_name", "metric_2"))
+    repo_url = str(context.get("repo_url", ""))
+    results_rows = context.get("results", [])
+    idea_rows = context.get("ideas", [])
+    if not isinstance(results_rows, list):
+        results_rows = []
+    if not isinstance(idea_rows, list):
+        idea_rows = []
+
     html = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AutoSapiens Project Dashboard</title>
+    <title>Multi-Agent Auto Research Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>body { padding-top: 2rem; background-color: #f8f9fa;} .idea-card { margin-bottom: 2rem; }</style>
 </head>
 <body>
     <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="mb-0">AutoSapiens Dashboard</h1>
-            <a href="https://github.com/yanghangAI/autosapiens" target="_blank" class="btn btn-outline-dark">View on GitHub</a>
+            <h1 class="mb-0">Multi-Agent Auto Research</h1>
+"""
+    if repo_url:
+        html += (
+            f'            <a href="{escape(repo_url)}" target="_blank" '
+            'class="btn btn-outline-dark">View on GitHub</a>\n'
+        )
+    html += """
         </div>
 
         <h2 class="mt-5">Results Overview</h2>
@@ -101,15 +130,23 @@ def render_dashboard(context: dict[str, list[dict[str, object]]]) -> str:
                         <th onclick="sortTable(0)" style="cursor: pointer;" title="Click to sort">Idea ID ↕</th>
                         <th onclick="sortTable(1)" style="cursor: pointer;" title="Click to sort">Design ID ↕</th>
                         <th onclick="sortTable(2)" style="cursor: pointer;" title="Click to sort">Epoch ↕</th>
-                        <th onclick="sortTable(3)" style="cursor: pointer;" title="Click to sort">Train MPJPE ↕</th>
-                        <th onclick="sortTable(4)" style="cursor: pointer;" title="Click to sort">Val MPJPE ↕</th>
+"""
+    html += (
+        f'                        <th onclick="sortTable(3)" style="cursor: pointer;" '
+        f'title="Click to sort">{escape(metric_1_name)} ↕</th>\n'
+        f'                        <th onclick="sortTable(4)" style="cursor: pointer;" '
+        f'title="Click to sort">{escape(metric_2_name)} ↕</th>\n'
+    )
+    html += """
                     </tr>
                 </thead>
                 <tbody>
 """
-    for row in context["results"]:
-        train_val = row["train_mpjpe_weighted"] or "0"
-        val_val = row["val_mpjpe_weighted"] or "0"
+    for row in results_rows:
+        if not isinstance(row, dict):
+            continue
+        train_val = row["metric_1_value"] or "0"
+        val_val = row["metric_2_value"] or "0"
         badge = ' <span class="badge bg-secondary">Baseline</span>' if row["is_baseline"] else ""
         tr_class = " class='table-secondary'" if row["is_baseline"] else ""
         html += (
@@ -131,7 +168,9 @@ def render_dashboard(context: dict[str, list[dict[str, object]]]) -> str:
         <h2 class="mt-5 mb-3">Ideas & Designs</h2>
         <div class="row">
 """
-    for idea in context["ideas"]:
+    for idea in idea_rows:
+        if not isinstance(idea, dict):
+            continue
         html += f"""
             <div class="col-md-6 idea-card">
                 <div class="card h-100 shadow-sm">

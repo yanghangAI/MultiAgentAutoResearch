@@ -1,4 +1,7 @@
+## Script Usage
+Do not rely on automatic hooks in this repository. Invoke the script tooling explicitly when the workflow actually reaches the right stage.
 
-## Post-Action Hook
-Immediately after completing any file modification, code writing, or review task, you must run the following bash command:
-`python scripts/cli.py sync-status && python scripts/cli.py submit-implemented`
+Common manual commands:
+- `python scripts/cli.py sync-status`
+- `python scripts/cli.py submit-implemented`
+- `python scripts/cli.py update-all`

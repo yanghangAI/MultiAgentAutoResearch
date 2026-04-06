@@ -25,7 +25,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     submit_parser = subparsers.add_parser("submit-implemented")
     submit_parser.add_argument("--root", type=Path, default=repo_root())
-    submit_parser.add_argument("--max-jobs", type=int, default=30)
+    submit_parser.add_argument("--max-jobs", type=int, default=None)
     submit_parser.add_argument("--dry-run", action="store_true")
 
     submit_test_parser = subparsers.add_parser("submit-test")

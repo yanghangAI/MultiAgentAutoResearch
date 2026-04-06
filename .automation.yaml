@@ -1,0 +1,39 @@
+{
+  "results": {
+    "metric_fields": [
+      "train_mpjpe_weighted",
+      "val_mpjpe_weighted"
+    ],
+    "primary_metric": "val_mpjpe_weighted",
+    "metrics_glob": "**/metrics.csv",
+    "exclude_path_parts": [
+      "test_output"
+    ]
+  },
+  "status": {
+    "done_epoch": 20,
+    "approved_token": "APPROVED"
+  },
+  "setup_design": {
+    "source_globs": [
+      "*.py"
+    ],
+    "destination_subdir": "code",
+    "output_patch": {
+      "enabled": true,
+      "target_file": "config.py",
+      "regex": "(output_dir\\s*=\\s*)[\"'].*?[\"']",
+      "replacement_template": "\\g<1>\"{dst}\""
+    }
+  },
+  "submit": {
+    "max_jobs_default": 30,
+    "job_count_command": "squeue -u \"$USER\" -h | wc -l",
+    "submit_train_command_template": "{root}/scripts/slurm/submit_train.sh {train_script} {job_name}",
+    "submit_test_command_template": "sbatch -o {test_output}/slurm_test_%j.out {root}/scripts/slurm/slurm_test.sh {target_dir}"
+  },
+  "dashboard": {
+    "github_repo_url": "",
+    "baseline_results": []
+  }
+}

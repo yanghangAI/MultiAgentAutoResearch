@@ -1,70 +1,33 @@
-# Agent Instructions: Setup System Hooks
+# Manual Script Workflow
 
-If you are an AI agent and the user asks you to "setup the hooks", immediately perform the following three steps without asking for clarification:
+This repository no longer recommends automatic git hooks, post-write hooks, or background file watchers for the experiment pipeline.
 
-### Step 1: Create Git Post-Commit Hook
-Create the file `.git/hooks/post-commit` with this exact content:
+Instead, invoke the script tooling explicitly when the workflow reaches the appropriate step.
+
+Recommended manual commands:
+
 ```bash
-#!/bin/bash
-if [ "$_IN_POST_COMMIT" = "1" ]; then exit 0; fi
-export _IN_POST_COMMIT=1
-
-if [ -f "scripts/cli.py" ]; then
-    flock -w 300 /tmp/sapiens_pipeline.lock -c "python scripts/cli.py update-all"
-fi
-```
-Then, run `chmod +x .git/hooks/post-commit` in the terminal to make it executable.
-
-### Step 2: Configure Automatic Post-File-Write Hook
-
-**Goal:** After every file write or edit, automatically run a concurrency-safe wrapper:
-```bash
-cd /work/pi_nwycoff_umass_edu/hang/auto && flock -n /tmp/sapiens_pipeline.lock -c "python scripts/cli.py sync-status && python scripts/cli.py submit-implemented" 2>/dev/null || true
+python scripts/cli.py summarize-results
+python scripts/cli.py sync-status
+python scripts/cli.py submit-implemented
+python scripts/cli.py build-dashboard
+python scripts/cli.py deploy-dashboard
+python scripts/cli.py update-all
 ```
 
-This must be triggered by the agent harness/runtime — not by the agent itself — so it fires reliably regardless of agent behavior.
+Recommended usage pattern:
 
-Use whichever mechanism your agent CLI supports:
+1. After review files or training outputs change, run:
+   ```bash
+   python scripts/cli.py sync-status
+   ```
+2. When you are ready to submit pending implemented designs, run:
+   ```bash
+   python scripts/cli.py submit-implemented
+   ```
+3. When you want to rebuild and deploy the dashboard, run:
+   ```bash
+   python scripts/cli.py update-all
+   ```
 
-**Claude Code** — add to `.claude/settings.json` (merge with existing, do not replace):
-```json
-{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "cd /work/pi_nwycoff_umass_edu/hang/auto && flock -n /tmp/sapiens_pipeline.lock -c \"python scripts/cli.py sync-status && python scripts/cli.py submit-implemented\" 2>/dev/null || true",
-            "statusMessage": "Syncing tracker and submitting..."
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-Validate with:
-```bash
-jq -e '.hooks.PostToolUse[] | select(.matcher == "Write|Edit") | .hooks[] | select(.type == "command") | .command' .claude/settings.json
-```
-
-**Cursor / other agent CLIs** — configure a post-file-save or post-tool-use hook in that tool's settings to run the same command above after any file modification.
-
-**No native hook support** — fall back to a filesystem watcher:
-```bash
-# Run in background; watches for file changes and triggers the sync
-while inotifywait -r -e close_write /work/pi_nwycoff_umass_edu/hang/auto --exclude '\.git'; do
-    cd /work/pi_nwycoff_umass_edu/hang/auto && flock -n /tmp/sapiens_pipeline.lock -c "python scripts/cli.py sync-status && python scripts/cli.py submit-implemented"
-done
-```
-
-### Step 3: Print Cron Job Instructions
-You cannot edit the user's crontab directly. Send a direct message to the user containing exactly this text:
-
-```text
-Your Git post-commit hook and agent post-action hooks are successfully configured!
-To set up the periodic scheduled hook for the SLURM cluster, please run `crontab -e` in your terminal and add this line:
-0 * * * * cd /work/pi_nwycoff_umass_edu/hang/auto && flock -w 300 /work/pi_nwycoff_umass_edu/hang/auto/sapiens_pipeline.lock -c "python scripts/cli.py summarize-results && python scripts/cli.py sync-status && python scripts/cli.py submit-implemented" >> /work/pi_nwycoff_umass_edu/hang/auto/cron_hook.log 2>&1
-```
+If you still want periodic automation in the future, prefer a deliberate cron job over edit-time or commit-time hooks.

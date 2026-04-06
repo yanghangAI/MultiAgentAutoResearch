@@ -27,6 +27,7 @@ if __package__ in {None, ""}:
 
 from scripts.lib.layout import parse_design_ref, resolve_code_dir  # noqa: E402
 from scripts.lib.models import ALLOWED_BOOTSTRAP_SOURCE_STATUSES  # noqa: E402
+from scripts.lib.project_config import load_project_config  # noqa: E402
 
 
 def _read_design_status(repo_root: Path, idea_id: str, design_id: str):
@@ -66,8 +67,9 @@ def _validate_source_status(src: Path, repo_root: Path):
 def setup_design(src: Path, dst: Path, root: Path | None = None) -> None:
     src = Path(src).resolve()
     dst = Path(dst).resolve()
-    code_dir = dst / "code"
     repo_root = Path(root).resolve() if root is not None else Path(__file__).resolve().parents[2]
+    cfg = load_project_config(repo_root)
+    code_dir = dst / cfg.setup_design.destination_subdir
 
     if not src.is_dir():
         raise SystemExit(f"Error: source folder not found: {src}")
@@ -79,37 +81,49 @@ def setup_design(src: Path, dst: Path, root: Path | None = None) -> None:
 
     code_dir.mkdir(parents=True, exist_ok=True)
 
-    # Copy all .py files from src (non-recursive — no test_output/ etc.)
+    # Copy configured file patterns from src (non-recursive — no test_output/ etc.)
     copied = []
-    for f in sorted(src_code.glob("*.py")):
-        shutil.copy2(f, code_dir / f.name)
-        copied.append(f.name)
+    seen: set[Path] = set()
+    for pattern in cfg.setup_design.source_globs:
+        for f in sorted(src_code.glob(pattern)):
+            if not f.is_file() or f in seen:
+                continue
+            shutil.copy2(f, code_dir / f.name)
+            copied.append(f.name)
+            seen.add(f)
 
     if not copied:
-        raise SystemExit(f"Error: no .py files found in {src_code}")
+        raise SystemExit(
+            f"Error: no matching source files found in {src_code} for patterns "
+            f"{list(cfg.setup_design.source_globs)}"
+        )
 
     print(f"Copied {len(copied)} file(s) from {src_code} → {code_dir}:")
     for name in copied:
         print(f"  {name}")
 
-    # Patch output_dir in config.py to point to the design folder (not code/)
-    config_path = code_dir / "config.py"
+    patch_cfg = cfg.setup_design.output_patch
+    if not patch_cfg.enabled:
+        return
+
+    # Optional patch hook for destination-specific output directory.
+    config_path = code_dir / patch_cfg.target_file
     if not config_path.exists():
-        print("Warning: config.py not found in destination — output_dir not patched.")
+        print(f"Warning: {patch_cfg.target_file} not found in destination — output patch skipped.")
         return
 
     text = config_path.read_text()
     new_text, n = re.subn(
-        r'(output_dir\s*=\s*)["\'].*?["\']',
-        rf'\g<1>"{dst}"',
+        patch_cfg.regex,
+        patch_cfg.replacement_template.format(dst=str(dst)),
         text,
     )
 
     if n == 0:
-        print("Warning: output_dir not found in config.py — not patched.")
+        print(f"Warning: output pattern not found in {patch_cfg.target_file} — patch skipped.")
     else:
         config_path.write_text(new_text)
-        print(f"Patched output_dir → \"{dst}\"")
+        print(f"Patched output path target in {patch_cfg.target_file} → \"{dst}\"")
 
 
 def main():

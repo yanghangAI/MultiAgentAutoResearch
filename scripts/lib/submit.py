@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import shlex
 import subprocess
 from pathlib import Path
 
 from scripts.lib import layout, store
 from scripts.lib.models import Status
+from scripts.lib.project_config import load_project_config
 
 
 def implemented_design_dirs(root: Path | None = None) -> list[Path]:
@@ -19,9 +21,14 @@ def implemented_design_dirs(root: Path | None = None) -> list[Path]:
     return found
 
 
-def current_job_count() -> int:
+def _format_shell_template(template: str, **kwargs: str) -> str:
+    return template.format(**{key: shlex.quote(value) for key, value in kwargs.items()})
+
+
+def current_job_count(root: Path | None = None) -> int:
+    cfg = load_project_config(root)
     result = subprocess.run(
-        ["bash", "-lc", 'squeue -u "$USER" -h | wc -l'],
+        ["bash", "-lc", cfg.submit.job_count_command],
         text=True,
         capture_output=True,
         check=True,
@@ -30,44 +37,53 @@ def current_job_count() -> int:
 
 
 def submit_train_script(train_script: Path, job_name: str, root: Path) -> None:
+    cfg = load_project_config(root)
+    command = _format_shell_template(
+        cfg.submit.submit_train_command_template,
+        root=str(root),
+        train_script=str(train_script),
+        job_name=job_name,
+    )
     subprocess.run(
-        [str(root / "scripts" / "slurm" / "submit_train.sh"), str(train_script), job_name],
+        ["bash", "-lc", command],
         check=True,
     )
 
 
 def submit_test(root: Path | None = None, target_dir: Path | None = None, dry_run: bool = False) -> Path:
+    cfg = load_project_config(root)
     root_path = layout.repo_root(root)
     target = Path(target_dir or Path.cwd()).resolve()
     test_output = target / "test_output"
     test_output.mkdir(parents=True, exist_ok=True)
 
-    command = [
-        "sbatch",
-        "-o",
-        str(test_output / "slurm_test_%j.out"),
-        str(root_path / "scripts" / "slurm" / "slurm_test.sh"),
-        str(target),
-    ]
+    command = _format_shell_template(
+        cfg.submit.submit_test_command_template,
+        root=str(root_path),
+        target_dir=str(target),
+        test_output=str(test_output),
+    )
     if dry_run:
         print("DRY RUN: would submit test job:")
-        print(" ".join(command))
+        print(command)
         return test_output
 
-    subprocess.run(command, check=True)
+    subprocess.run(["bash", "-lc", command], check=True)
     print(f"Submitted test job for {target}")
     return test_output
 
 
 def submit_implemented(
     root: Path | None = None,
-    max_jobs: int = 30,
+    max_jobs: int | None = None,
     dry_run: bool = False,
 ) -> list[str]:
+    cfg = load_project_config(root)
     root_path = layout.repo_root(root)
+    max_jobs = max_jobs if max_jobs is not None else cfg.submit.max_jobs_default
     submitted: list[str] = []
     for design_path in implemented_design_dirs(root_path):
-        current_jobs = 0 if dry_run else current_job_count()
+        current_jobs = 0 if dry_run else current_job_count(root_path)
         if current_jobs >= max_jobs:
             print(f"Job limit reached ({current_jobs}/{max_jobs}). Pausing submissions.")
             break

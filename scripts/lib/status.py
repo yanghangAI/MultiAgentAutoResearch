@@ -5,6 +5,7 @@ from pathlib import Path
 
 from scripts.lib import layout, results as results_service, store
 from scripts.lib.models import Status
+from scripts.lib.project_config import load_project_config
 
 
 IDEA_HEADERS = ["Idea_ID", "Idea_Name", "Status"]
@@ -165,6 +166,7 @@ def derive_design_status(
     root: Path | None = None,
     results_index: dict[tuple[str, str], dict[str, str]] | None = None,
 ) -> str | None:
+    cfg = load_project_config(root)
     if results_index is None:
         results_index = load_results_index(root)
     row = results_index.get((idea_id, design_id))
@@ -173,17 +175,17 @@ def derive_design_status(
             epoch = int(float(row.get("epoch", "0")))
         except ValueError:
             epoch = 0
-        return Status.DONE if epoch >= 20 else Status.TRAINING
+        return Status.DONE if epoch >= cfg.status.done_epoch else Status.TRAINING
 
     design_path = layout.design_dir(idea_id, design_id, root)
     code_review = store.read_text(design_path / "code_review.md")
-    if "APPROVED" in code_review:
+    if cfg.status.approved_token in code_review:
         if list(design_path.glob("slurm_*.out")):
             return Status.SUBMITTED
         return Status.IMPLEMENTED
 
     review = store.read_text(design_path / "review.md")
-    if "APPROVED" in review:
+    if cfg.status.approved_token in review:
         return Status.NOT_IMPLEMENTED
     return None
 
