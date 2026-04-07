@@ -19,13 +19,14 @@
 
 **Code Review:**
 1. Receive the target `idea_id` to review.
-2. Read all approved `design.md` files and their implementation files under `runs/<idea_id>/<idea_id>/code`.
+2. Read all approved `design.md` files, their implementation files under `runs/<idea_id>/<design_id>/code`, and the corresponding `test_output` artifacts for each design.
 3. Review all implemented designs for that idea in one pass.
 4. Check that each implementation matches all required details in its design, not just the high-level idea.
 5. Reject the code for any design if a required design detail is missing, changed without justification, only partially implemented, or implemented in the wrong place.
-6. Check correctness, regressions, and consistency with the stated config and behavior in each `design.md`.
-7. Write verdict to each design's `code_review.md` and append to each `code_review_log.md`.
-8. Only after all reviewed implementations for the assigned `idea_id` pass, run `python scripts/cli.py sync-status`.
+6. Check `test_output` to confirm the reduced test-train ran correctly, produced the expected outputs, and did not reveal obvious runtime or output-generation issues.
+7. Check correctness, regressions, and consistency with the stated config and behavior in each `design.md`.
+8. Write verdict to each design's `code_review.md` and append to each `code_review_log.md`.
+9. Only after all reviewed implementations for the assigned `idea_id` pass, run `python scripts/cli.py sync-status`.
 
 **Rules:**
 1. Output APPROVED or REJECTED with concrete fixes.

@@ -53,7 +53,7 @@ What each command does:
 - `setup-design <src> <dst>`
   Copies files from a baseline or prior design into the destination layout according to `.automation.yaml` (`setup_design.source_globs`, destination subdir, optional output patch rule).
 - `submit-test <design_dir>`
-  Submits a sanity-check job for a design using the configured command template and writes outputs in `<design_dir>/test_output/` by default.
+  Submits a fast mini-train job for a design using the configured command template. It should exercise the real training path with reduced sample / reduced iteration settings and write outputs in `<design_dir>/test_output/` by default.
 - `submit-train <train.py> [job_name]`
   Submits a full training SLURM job for a specific training script.
 - `submit-implemented`

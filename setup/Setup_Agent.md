@@ -33,16 +33,19 @@ Read the target project directory thoroughly:
 - Config files and how output paths are set.
 - Metrics logged and where (CSV, JSON, stdout) — exact column names.
 - Runtime environment (local, SLURM, cloud).
+- The exact runtime environment details if relevant (for example: conda env name, virtualenv, module load commands, CUDA assumptions, shell activation steps).
 - Training execution setup required by the user (CPU, single GPU, multi-GPU, SLURM, or another mode).
 - Whether the user wants the dashboard website set up and deployed.
 - Shared utilities suitable for `infra/` (dataset loaders, metrics, logging, constants).
 - Canonical starting implementation suitable for `baseline/`.
 - File types that should be copied when bootstrapping a new design.
+- How `submit-test` should run as a fast mini-train that still exercises the true training path and generates the same kinds of outputs under `test_output/`.
 
 If anything is genuinely ambiguous after reading, **ask the user** in a single message before proceeding. Examples:
 - "I see two validation metrics — `val_loss` and `val_acc`. Which is the primary metric?"
 - "How many epochs marks a run as done?"
 - "Your submit scripts reference partition `gpu` — is that correct for your cluster?"
+- "What runtime environment should this automation assume? For example: conda env name, virtualenv, module load commands, or any required activation steps."
 - "What training setup do you want this automation to target: CPU, single GPU, multi-GPU, SLURM, or something else?"
 - "Do you want me to set up the dashboard website and GitHub deployment flow too?"
 - "If yes, should I also set up the GitHub repo/remote configuration needed for deployment?"
@@ -72,7 +75,14 @@ Exact column names logged, which file/format, which is the primary metric.
 What epoch count (or other signal) marks a run as `Done`.
 
 #### Section 6: Runtime Environment
-Local / SLURM / cloud, submit command patterns.
+Local / SLURM / cloud, submit command patterns, and environment details such as:
+- conda env or virtualenv name
+- activation commands
+- module load commands
+- CUDA / device assumptions
+- any shell or launcher requirements
+
+These environment details should be handled by the automation scripts and setup-owned configuration where possible, rather than pushed into day-to-day agent prompts.
 
 #### Section 7: Training Setup
 The user-approved execution mode for this project. State it explicitly, for example:
@@ -86,6 +96,9 @@ Also note any requirements this creates for submission, such as:
 - whether `submit-implemented` should launch local processes or scheduler jobs
 - whether distributed launch is needed
 - any device/count/partition assumptions
+- how `submit-test` should stay fast while still exercising the real training code path
+- what reduced sample / reduced iteration behavior should be used
+- what outputs `submit-test` must generate under `test_output/`
 
 #### Section 8: Website and Deployment Setup
 State explicitly whether the user wants website setup.
@@ -173,6 +186,8 @@ Once the user approves the overview, update `.automation.yaml`:
 - `dashboard.github_repo_url` (if website deployment is enabled and known)
 
 The `submit.*` configuration must match the user-approved training setup recorded in `docs/project_overview.md`.
+If runtime environment setup is required, handle it in `scripts/` and setup-owned configuration so commands run under the correct environment automatically. Only update agent prompts with environment details if an agent truly needs to know them.
+`submit-test` must be configured as a fast but faithful mini-train: it should execute the real training path with reduced sample / reduced iteration settings and generate the same kinds of outputs the real training run would generate, but under `test_output/`.
 If website deployment is enabled, set up the required GitHub repo/remote configuration for deployment or clearly stop and ask the user for the missing GitHub information before proceeding.
 
 Then spawn both sub-agents at the same time. Each receives the path to `docs/project_overview.md` as its sole briefing.
@@ -181,7 +196,7 @@ Then spawn both sub-agents at the same time. Each receives the path to `docs/pro
 Updates all agent prompts in `agents/*/prompt.md` to use the target project's vocabulary, file paths, metric names, and constraints.
 
 **Sub-agent B — Infra and Baseline Builder** (`setup/Infra_Baseline_Agent.md`)
-Writes, tests, and documents `infra/` and `baseline/`, and adapts submission-related setup to the training mode recorded in `docs/project_overview.md`.
+Writes, tests, and documents `infra/` and `baseline/`, and updates `scripts/` too if the target project requires automation-layer changes such as submission, metrics parsing, dashboard behavior, or bootstrap logic.
 
 ### Step 6 — Validate end-to-end
 
@@ -195,6 +210,8 @@ python scripts/cli.py submit-test --dry-run
 ```
 
 If website deployment is enabled and GitHub setup is complete, also validate the deployment path as far as safely possible for the current environment.
+
+Also validate that `submit-test` really runs the true training path in reduced form and produces the expected output artifacts under `test_output/`.
 
 Fix any failures. If a failure is clearly owned by one sub-agent's work, fix it directly rather than re-spawning.
 
@@ -215,7 +232,8 @@ Write a concise summary covering:
 2. Never manually edit statuses in CSV trackers.
 3. Ask the user rather than guess when something is genuinely ambiguous.
 4. Do not refactor target project code — only set up the automation layer.
-5. Do not spawn sub-agents until the user has explicitly approved `docs/project_overview.md`.
+5. Updating this repo's automation files, including `scripts/`, is allowed when needed to support the target project correctly.
+6. Do not spawn sub-agents until the user has explicitly approved `docs/project_overview.md`.
 
 ## Definition of Done
 

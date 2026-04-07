@@ -259,6 +259,10 @@ def derive_design_status(
         return Status.DONE if epoch >= cfg.status.done_epoch else Status.TRAINING
 
     design_path = layout.design_dir(idea_id, design_id, root)
+    implement_failed = store.read_text(design_path / "implement_failed.md")
+    if implement_failed.strip():
+        return Status.IMPLEMENT_FAILED
+
     code_review = store.read_text(design_path / "code_review.md")
     if cfg.status.approved_token in code_review:
         if list(design_path.glob("slurm_*.out")):

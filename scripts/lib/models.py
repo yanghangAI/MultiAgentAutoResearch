@@ -7,6 +7,7 @@ class Status:
     NOT_DESIGNED = "Not Designed"
     DESIGNED = "Designed"
     NOT_IMPLEMENTED = "Not Implemented"
+    IMPLEMENT_FAILED = "Implement Failed"
     IMPLEMENTED = "Implemented"
     SUBMITTED = "Submitted"
     TRAINING = "Training"
@@ -15,6 +16,7 @@ class Status:
 
 DESIGN_STATUS_ORDER = (
     Status.NOT_IMPLEMENTED,
+    Status.IMPLEMENT_FAILED,
     Status.IMPLEMENTED,
     Status.SUBMITTED,
     Status.TRAINING,

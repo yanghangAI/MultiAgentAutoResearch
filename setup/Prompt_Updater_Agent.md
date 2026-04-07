@@ -31,6 +31,7 @@ For each agent in `agents/*/prompt.md`, update the prompt to:
 - Reference concrete example paths where helpful (e.g. `runs/idea001/design001/code/train.py`).
 - Mention the completion rule so agents know when a design is `Done`.
 - Match the runtime environment (e.g. SLURM-specific language if applicable).
+- Do not push low-level environment setup details into prompts; prefer handling them in scripts and setup-owned config.
 
 Keep strictly unchanged:
 - Each agent's role definition and responsibilities.

@@ -127,6 +127,14 @@ def test_status_derivation_marks_submitted_and_training(tmp_path: Path) -> None:
     assert derive_design_status("idea001", "design002", root=tmp_path) == "Training"
 
 
+def test_status_derivation_marks_implement_failed(tmp_path: Path) -> None:
+    init_status_fixture(tmp_path)
+    design = tmp_path / "runs" / "idea001" / "design001"
+    (design / "implement_failed.md").write_text("Blocked after repeated failures\n", encoding="utf-8")
+
+    assert derive_design_status("idea001", "design001", root=tmp_path) == "Implement Failed"
+
+
 def test_sync_status_cli_updates_csvs(tmp_path: Path) -> None:
     init_status_fixture(tmp_path)
     write_csv(
@@ -147,6 +155,22 @@ def test_sync_status_cli_updates_csvs(tmp_path: Path) -> None:
     assert "design001,first,Done" in design_csv
     assert "design002,second,Implemented" in design_csv
     assert "idea001,Idea One,Implemented" in idea_csv
+
+
+def test_sync_status_marks_implement_failed_in_csv(tmp_path: Path) -> None:
+    init_status_fixture(tmp_path)
+    (tmp_path / "runs" / "idea001" / "design001" / "implement_failed.md").write_text(
+        "Blocked after repeated failures\n",
+        encoding="utf-8",
+    )
+
+    result = run_cli(tmp_path, "sync-status")
+
+    assert result.returncode == 0, result.stderr
+    design_csv = (tmp_path / "runs" / "idea001" / "design_overview.csv").read_text(encoding="utf-8")
+    idea_csv = (tmp_path / "runs" / "idea_overview.csv").read_text(encoding="utf-8")
+    assert "design001,first,Implement Failed" in design_csv
+    assert "idea001,Idea One,Designed" in idea_csv
 
 
 def test_add_idea_cli_registers_idea_and_creates_design_tracker(tmp_path: Path) -> None:

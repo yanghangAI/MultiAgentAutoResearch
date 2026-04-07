@@ -123,41 +123,6 @@ python scripts/cli.py build-dashboard     # generates website/index.html
 
 ---
 
-## How Experiments Are Tracked
-
-Every experiment follows an **idea → design** lifecycle stored in `runs/`:
-
-```
-runs/
-  idea_overview.csv              ← all ideas and their status
-  idea001/
-    idea.md                      ← what to explore and why
-    design_overview.csv          ← all designs under this idea
-    design001/
-      design.md                  ← concrete implementation spec
-      design_review.md           ← Reviewer design decision (APPROVED / REJECTED)
-      code_review.md             ← post-implementation code audit
-      code/                      ← actual implementation (bootstrapped by setup-design)
-```
-
-Statuses are derived automatically from filesystem signals — review files, training outputs, job logs. Never edit CSVs by hand; run `sync-status` instead.
-If you create a new `runs/ideaXXX/idea.md`, include `**Idea Name:** ...` so `sync-status` can auto-register it in `runs/idea_overview.csv`.
-If you create a new `runs/<idea_id>/designXXX/design.md`, include `**Design Description:** ...` so `sync-status` can auto-register it in `runs/<idea_id>/design_overview.csv`.
-
-**Design lifecycle:**
-
-```
-Not Implemented → Implemented → Submitted → Training → Done
-```
-
-**Idea lifecycle** (derived from its designs):
-
-```
-Not Designed → Designed → Implemented → Training → Done
-```
-
----
-
 ## Configuration
 
 All behavior is controlled by `.automation.yaml`. The key fields:
@@ -204,6 +169,40 @@ scripts/
 setup/            Agent prompts for initial project setup
 website/          Generated results dashboard
 .automation.yaml  Project configuration
+```
+
+Within `runs/`, every experiment follows an **idea → design** lifecycle:
+
+```
+runs/
+  idea_overview.csv              ← all ideas and their status
+  idea001/
+    idea.md                      ← what to explore and why
+    design_overview.csv          ← all designs under this idea
+    design001/
+      design.md                  ← concrete implementation spec
+      design_review.md           ← Reviewer design decision (APPROVED / REJECTED)
+      code_review.md             ← post-implementation code audit
+      test_output/               ← outputs from the reduced test-train run
+      output/                    ← outputs from the real training run (project-specific)
+      code/                      ← actual implementation (bootstrapped by setup-design)
+```
+
+Statuses are derived automatically from filesystem signals — review files, training outputs, job logs. Never edit CSVs by hand; run `sync-status` instead.
+If you create a new `runs/ideaXXX/idea.md`, include `**Idea Name:** ...` so `sync-status` can auto-register it in `runs/idea_overview.csv`.
+If you create a new `runs/<idea_id>/designXXX/design.md`, include `**Design Description:** ...` so `sync-status` can auto-register it in `runs/<idea_id>/design_overview.csv`.
+
+**Design lifecycle:**
+
+```
+Not Implemented → Implement Failed
+Not Implemented → Implemented → Submitted → Training → Done
+```
+
+**Idea lifecycle** (derived from its designs):
+
+```
+Not Designed → Designed → Implemented → Training → Done
 ```
 
 ---
