@@ -31,9 +31,14 @@ A second key feature is the **script layer**. Rather than relying on agents to t
 ML research is repetitive: come up with an idea, implement it, run it, check results, repeat. This framework delegates that loop to a team of AI agents that collaborate through a structured workflow:
 
 ```
-Architect → Designer → Reviewer → Builder → Reviewer → Orchestrator
-    ↑                                                        |
-    └──────────────── new ideas from results ────────────────┘
+┌─────────────────────── Orchestrator ───────────────────────────┐
+│                                                                 │
+│  Architect → Designer → Reviewer → Builder → Reviewer          │
+│      ↑          idea     (design)    code     (code)           │
+│      │                                           │             │
+│      └──────────── results from training ─────── submit jobs ──┘
+└─────────────────────────────────────────────────────────────────┘
+                          Debugger (on-call for automation bugs)
 ```
 
 Each agent has a focused role:
