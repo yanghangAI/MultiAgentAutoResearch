@@ -57,7 +57,7 @@ Open Claude Code in this repository. Enable **bypass mode** (ask claude to do it
 
 Then tell it to act as the Setup Agent:
 
-> "Read `setup/Setup_Agent.md` and act as the Setup Agent. Set up this repo for my project at `/path/to/my/project`"
+> "Read `setup/Setup_Agent.md` and act as the Setup Agent."
 
 Claude Code will take it from there. The Setup Agent:
 - Reads your training code to understand metrics, config, and runtime environment

@@ -23,6 +23,7 @@ Read `docs/project_overview.md` in full. Extract:
 - Which source files form the baseline implementation.
 - The training entrypoint and how to invoke it.
 - The required training setup (CPU, single GPU, multi-GPU, SLURM, etc.).
+- Whether website deployment is in scope and what GitHub/deployment setup is expected.
 - The config file and how the output path is set.
 - The bootstrap file glob patterns (`setup_design.source_globs`).
 - The `setup_design.output_patch` config (target file, regex, replacement template).
@@ -72,6 +73,13 @@ Use the training setup recorded in `docs/project_overview.md` to ensure the auto
 - If the project should run through SLURM, make sure the submission-related setup is compatible with the expected scheduler workflow.
 
 Flag any mismatch between the recorded training setup and the current submission behavior, and fix repo-side setup where this sub-agent owns it.
+
+If website deployment is in scope, also ensure the repo-side deployment assumptions are compatible with the overview, especially:
+- the expected GitHub repository URL
+- the intended deployment branch or Pages flow
+- any repo-local setup needed for `build-dashboard` / `deploy-dashboard`
+
+If website deployment is out of scope, leave deployment setup unchanged.
 
 ### Step 4 — Initialize tracking files
 

@@ -5,13 +5,27 @@
 **Input You Must Receive:**
 - Path to the target project directory.
 
-That is the only required input. Everything else you figure out by exploring the project. If something is ambiguous after reading the code, ask the user directly before proceeding.
+Optional but helpful user context:
+- The user's own idea of what the project is about.
+- A short summary of the project in the user's words.
+
+The only required input is the path to the target project directory. Ask for the optional project context if it would help, but do not block on it. Use any user-provided context as initial guidance, then verify and expand it by exploring the project code. If something is ambiguous after reading the code, ask the user directly before proceeding.
 
 ---
 
 ## Process
 
-### Step 1 — Explore the target project
+### Step 1 — Collect the user briefing
+
+Before exploring the codebase, make sure you have the path to the target project folder.
+
+If helpful, also ask the user for:
+- their idea of what the project is about
+- a short summary of the project
+
+Use any briefing the user provides to guide your exploration, but do not rely on it blindly; verify details against the codebase.
+
+### Step 2 — Explore the target project
 
 Read the target project directory thoroughly:
 - Training entrypoint (e.g. `train.py`) and how to invoke it.
@@ -19,6 +33,7 @@ Read the target project directory thoroughly:
 - Metrics logged and where (CSV, JSON, stdout) — exact column names.
 - Runtime environment (local, SLURM, cloud).
 - Training execution setup required by the user (CPU, single GPU, multi-GPU, SLURM, or another mode).
+- Whether the user wants the dashboard website set up and deployed.
 - Shared utilities suitable for `infra/` (dataset loaders, metrics, logging, constants).
 - Canonical starting implementation suitable for `baseline/`.
 - File types that should be copied when bootstrapping a new design.
@@ -28,10 +43,12 @@ If anything is genuinely ambiguous after reading, **ask the user** in a single m
 - "How many epochs marks a run as done?"
 - "Your submit scripts reference partition `gpu` — is that correct for your cluster?"
 - "What training setup do you want this automation to target: CPU, single GPU, multi-GPU, SLURM, or something else?"
+- "Do you want me to set up the dashboard website and GitHub deployment flow too?"
+- "If yes, should I also set up the GitHub repo/remote configuration needed for deployment?"
 
 Wait for answers, then continue.
 
-### Step 2 — Write the project overview to `docs/project_overview.md`
+### Step 3 — Write the project overview to `docs/project_overview.md`
 
 Write a structured overview that will serve as the shared source of truth for both sub-agents. It must cover all sections below.
 
@@ -68,7 +85,18 @@ Also note any requirements this creates for submission, such as:
 - whether distributed launch is needed
 - any device/count/partition assumptions
 
-#### Section 8: What Changes During Auto Research
+#### Section 8: Website and Deployment Setup
+State explicitly whether the user wants website setup.
+
+If the answer is yes, record:
+- whether GitHub-based deployment should be configured
+- the target repository URL if known
+- whether a new GitHub repo still needs to be created or connected
+- whether GitHub Pages / `gh-pages` deployment is expected
+
+If the answer is no, say that website deployment is out of scope for this setup.
+
+#### Section 9: What Changes During Auto Research
 Two parts:
 
 **Infrastructure changes** — files and directories the agents will create or modify during the research loop:
@@ -83,7 +111,7 @@ Two parts:
 - Which architectural choices can be explored (e.g. fusion strategy, number of layers, activation functions)
 - What kinds of ideas are in scope (e.g. data augmentation, regularization, architecture variants)
 
-#### Section 9: What Never Changes
+#### Section 10: What Never Changes
 Two parts:
 
 **Infrastructure boundaries** — files and directories that must remain stable throughout the research loop:
@@ -101,23 +129,23 @@ Two parts:
 
 These invariants are the baseline contract. Every design must respect them, or results are not comparable.
 
-#### Section 10: Infra Candidates
+#### Section 11: Infra Candidates
 List of files/modules from the target project that belong in `infra/` and why.
 
-#### Section 11: Baseline Candidates
+#### Section 12: Baseline Candidates
 List of files from the target project that belong in `baseline/` and why.
 
-#### Section 12: File Bootstrap Pattern
+#### Section 13: File Bootstrap Pattern
 Glob patterns for `setup-design` to copy when creating a new design (e.g. `*.py`).
 
-#### Section 13: Open Questions
+#### Section 14: Open Questions
 Anything still uncertain that sub-agents should flag if they encounter it.
 
 ---
 
 This document is the only input both sub-agents receive about the target project. Make it complete and precise.
 
-### Step 3 — Ask the user to review
+### Step 4 — Ask the user to review
 
 Present the overview to the user and explicitly ask for approval:
 
@@ -125,16 +153,17 @@ Present the overview to the user and explicitly ask for approval:
 
 **Do not proceed until the user explicitly approves.** If they request changes, update `docs/project_overview.md` and ask again.
 
-### Step 4 — Update `.automation.yaml` and spawn two sub-agents in parallel
+### Step 5 — Update `.automation.yaml` and spawn two sub-agents in parallel
 
 Once the user approves the overview, update `.automation.yaml`:
 - `results.metric_fields`, `results.primary_metric`, `results.metrics_glob`
 - `status.done_epoch`, `status.approved_token`
 - `setup_design.source_globs`, `setup_design.destination_subdir`, `setup_design.output_patch`
 - `submit.*_command_template`, `submit.job_count_command`
-- `dashboard.github_repo_url` (if known)
+- `dashboard.github_repo_url` (if website deployment is enabled and known)
 
 The `submit.*` configuration must match the user-approved training setup recorded in `docs/project_overview.md`.
+If website deployment is enabled, set up the required GitHub repo/remote configuration for deployment or clearly stop and ask the user for the missing GitHub information before proceeding.
 
 Then spawn both sub-agents at the same time. Each receives the path to `docs/project_overview.md` as its sole briefing.
 
@@ -144,7 +173,7 @@ Updates all agent prompts in `agents/*/prompt.md` to use the target project's vo
 **Sub-agent B — Infra and Baseline Builder** (`setup/Infra_Baseline_Agent.md`)
 Writes, tests, and documents `infra/` and `baseline/`, and adapts submission-related setup to the training mode recorded in `docs/project_overview.md`.
 
-### Step 5 — Validate end-to-end
+### Step 6 — Validate end-to-end
 
 After both sub-agents complete, run:
 ```bash
@@ -155,9 +184,11 @@ python scripts/cli.py submit-implemented --dry-run
 python scripts/cli.py submit-test --dry-run
 ```
 
+If website deployment is enabled and GitHub setup is complete, also validate the deployment path as far as safely possible for the current environment.
+
 Fix any failures. If a failure is clearly owned by one sub-agent's work, fix it directly rather than re-spawning.
 
-### Step 6 — Handoff summary
+### Step 7 — Handoff summary
 
 Write a concise summary covering:
 - Every file changed or created.
