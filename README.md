@@ -89,7 +89,7 @@ After setup finishes, close that setup session and open a new Claude Code sessio
 
 In a new Claude Code session, tell it to act as the Orchestrator:
 
-> Read `agents/Orchestrator/prompt.md` and act as the Orchestrator. Start the research loop.
+> Read `agents/Orchestrator/prompt.md` and act as the Orchestrator.
 
 The Orchestrator spawns the Architect, which reads prior results and proposes ideas. From there the loop runs autonomously — designing, implementing, reviewing, submitting — and surfaces results in the dashboard.
 
