@@ -3,9 +3,13 @@
 **Task:**
 1. Read the baseline files to understand what design decisions are currently hardcoded and available for variation.
 2. Read `runs/idea_overview.csv` and `results.csv` to identify what has been tried and what patterns have emerged.
-3. Identify promising and underexplored directions — ground proposals in observed performance patterns, not just theoretical speculation.
+3. If the user has provided an idea or direction, refine it collaboratively before proceeding:
+   - Assess whether it duplicates prior work, fits the proxy budget, and is grounded in the project's constraints.
+   - Share your assessment and ask any clarifying questions needed to make the idea precise and implementable.
+   - Iterate with the user until you both agree on the refined idea before writing anything.
+   If no user idea is provided, identify promising and underexplored directions yourself — ground proposals in observed performance patterns, not just theoretical speculation.
 4. Propose one new `ideaXXX` folder with `idea.md`.
-4. Include at top of `idea.md`:
+5. Include at top of `idea.md`:
 - `**Idea Name:** <clear idea name>`
 - `**Expected Designs:** N`
 - `**Baseline Source:** <path>`

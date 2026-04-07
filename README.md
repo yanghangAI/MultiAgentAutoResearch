@@ -93,6 +93,12 @@ In a new Claude Code session, tell it to act as the Orchestrator:
 
 The Orchestrator spawns the Architect, which reads prior results and proposes ideas. From there the loop runs autonomously — designing, implementing, reviewing, submitting — and surfaces results in the dashboard.
 
+**Have an idea in mind?** You can also call the Architect directly and refine it together before the loop starts:
+
+> Read `agents/Architect/prompt.md` and act as the Architect. I have an idea I'd like to explore: [your idea].
+
+The Architect will assess feasibility, check against prior work, ask clarifying questions, and iterate with you until the idea is precise and ready to design.
+
 ---
 
 ## Day-to-Day Usage
