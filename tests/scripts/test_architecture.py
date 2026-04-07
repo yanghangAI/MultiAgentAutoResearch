@@ -428,3 +428,39 @@ def test_deploy_dashboard_refuses_dirty_tree(tmp_path: Path) -> None:
 
     assert result.returncode != 0
     assert "dirty git tree" in result.stderr or "dirty git tree" in result.stdout
+
+
+def test_deploy_dashboard_does_not_switch_current_branch(tmp_path: Path) -> None:
+    subprocess.run(["git", "init", "-b", "main"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_path, check=True)
+    (tmp_path / "website").mkdir()
+    (tmp_path / "website" / "index.html").write_text("<html>new dashboard</html>\n", encoding="utf-8")
+    (tmp_path / "README.md").write_text("root\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "checkout", "-b", "gh-pages"], cwd=tmp_path, check=True, capture_output=True)
+    (tmp_path / "index.html").write_text("<html>old dashboard</html>\n", encoding="utf-8")
+    subprocess.run(["git", "add", "index.html"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-m", "old deploy"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "checkout", "main"], cwd=tmp_path, check=True, capture_output=True)
+
+    result = run_cli(tmp_path, "deploy-dashboard", "--no-push")
+
+    assert result.returncode == 0, result.stderr
+    current_branch = subprocess.run(
+        ["git", "branch", "--show-current"],
+        cwd=tmp_path,
+        check=True,
+        text=True,
+        capture_output=True,
+    ).stdout.strip()
+    deployed_html = subprocess.run(
+        ["git", "show", "gh-pages:index.html"],
+        cwd=tmp_path,
+        check=True,
+        text=True,
+        capture_output=True,
+    ).stdout
+    assert current_branch == "main"
+    assert "new dashboard" in deployed_html

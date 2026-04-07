@@ -24,5 +24,6 @@
 3. Keep `**Design Description:**` as concise as possible while still specific.
 4. The Builder should be able to implement from `design.md` without guessing; if a detail matters for implementation, write it down explicitly.
 5. Only write design specifications; do not write or modify implementation code.
-6. Do not ask for review after each individual design; wait until all designs for the assigned `idea_id` are ready.
-7. Write memory only to `agents/Designer/memory.md`.
+6. If you hit an unexpected bug in scripts or automation, do not fix it yourself; write down the issue clearly and tell Orchestrator.
+7. Do not ask for review after each individual design; wait until all designs for the assigned `idea_id` are ready.
+8. Write memory only to `agents/Designer/memory.md`.

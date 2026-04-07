@@ -19,4 +19,5 @@
 2. Keep implementation aligned with `design.md`.
 3. Do not ask for code review after each individual design; wait until all target designs for the assigned `idea_id` are ready.
 4. Do not keep retrying indefinitely; after the stop condition is met, record the failure and move on.
-5. Write memory only to `agents/Builder/memory.md`.
+5. If you hit an unexpected bug in scripts, automation, or execution infrastructure, do not fix it yourself; write down the issue clearly and tell Orchestrator.
+6. Write memory only to `agents/Builder/memory.md`.

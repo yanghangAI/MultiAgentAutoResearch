@@ -16,6 +16,16 @@ The agents autonomously explored 5 research directions (RGB-D fusion, kinematic 
 
 ---
 
+## Why Multi-Agent?
+
+The core motivation is **context window limits**. A single agent running a full research campaign — reading all past results, the entire codebase, the current design, and its implementation — quickly exhausts its context. As the experiment count grows, a single agent becomes unusable.
+
+Splitting the loop into specialized agents keeps each agent's context small and focused: the Architect reads only results summaries, the Designer reads one `idea.md`, the Builder reads one `design.md` plus relevant code. The CSV/file-based state store acts as external memory that persists across sessions. This makes the framework unbounded in campaign length — you can run hundreds of experiments without any single agent's context growing with the experiment count.
+
+A second key feature is the **script layer**. Rather than relying on agents to track state in memory, every meaningful action — registering an idea, syncing statuses, submitting jobs, building the dashboard — is committed to disk through CLI scripts. This makes the system reliable: if an agent crashes or a session ends, no work is lost. The next agent picks up exactly where the last one left off by reading the files.
+
+---
+
 ## What It Does
 
 ML research is repetitive: come up with an idea, implement it, run it, check results, repeat. This framework delegates that loop to a team of AI agents that collaborate through a structured workflow:
@@ -34,7 +44,8 @@ Each agent has a focused role:
 | **Designer** | Writes concrete implementation specs (`design.md`) |
 | **Reviewer** | Approves or rejects designs and implementations |
 | **Builder** | Implements approved designs, runs sanity tests |
-| **Orchestrator** | Coordinates agents, syncs status, submits training jobs |
+| **Orchestrator** | Coordinates agents and runs orchestration-only scripts |
+| **Debugger** | Fixes unexpected automation or execution bugs reported by other agents |
 
 Experiment state is tracked in plain CSV files under `runs/`. The CLI keeps everything in sync.
 
@@ -159,6 +170,7 @@ agents/           AI agent prompts and memory
   Designer/
   Reviewer/
   Builder/
+  Debugger/
 baseline/         Starting implementation — bootstrapped into every new design
 infra/            Shared stable code (dataset utils, metrics, logging)
 runs/             Live experiment tracker (ideas, designs, statuses)

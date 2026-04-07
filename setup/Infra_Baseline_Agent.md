@@ -28,7 +28,7 @@ Read `docs/project_overview.md` in full. Extract:
 - The config file and how the output path is set.
 - The bootstrap file glob patterns (`setup_design.source_globs`).
 - The `setup_design.output_patch` config (target file, regex, replacement template).
-- The intended `submit-test` behavior: fast mini-train, real train path, reduced sample / reduced iterations, and expected outputs under `test_output/`.
+- The intended `submit-test` behavior: fast mini-train, real train path, and the exact reduced-run mechanism confirmed by the user (e.g. a specific flag, env variable, config field, or dataset override). This decision is already recorded in the overview — implement it exactly as specified, do not re-decide it.
 
 ### Step 2 — Write `infra/`
 
@@ -73,11 +73,17 @@ Use the training setup recorded in `docs/project_overview.md` to ensure the auto
 - If the project should run on a single GPU or multiple GPUs, make sure launch patterns and assumptions match that setup.
 - If the project should run through SLURM, make sure the submission-related setup is compatible with the expected scheduler workflow.
 
+**For non-SLURM setups**, the default `scripts/slurm/` scripts and `.automation.yaml` templates must be replaced or supplemented:
+- Write a local launcher script (e.g. `scripts/local/submit_train.sh`) that runs the training job as a background process and logs stdout/stderr to a file.
+- Write a local test runner script (e.g. `scripts/local/submit_test.sh`) that runs the mini-train synchronously so the Setup Agent can validate it inline.
+- Update `submit_train_command_template` in `.automation.yaml` to point to the local launcher.
+- Update `submit_test_command_template` in `.automation.yaml` to point to the local test runner.
+- Update `job_count_command` in `.automation.yaml` to count active local training processes (e.g. `pgrep -f train.py | wc -l`).
+
 Flag any mismatch between the recorded training setup and the current submission behavior, and fix repo-side setup where this sub-agent owns it.
 
-`submit-test` must be designed as a fast but faithful mini-run:
+`submit-test` must be implemented using the exact reduced-run mechanism confirmed by the user and recorded in the project overview. Do not choose or change this mechanism — implement it faithfully:
 - it should execute the real training path, not a fake stub
-- it should reduce sample count, epochs, iterations, or equivalent runtime knobs to stay fast
 - it should write the same kinds of outputs the real training run would write, but under `test_output/`
 - it should provide confidence that if the test passes, the real training run is unlikely to fail immediately from basic code-path or output-generation issues
 

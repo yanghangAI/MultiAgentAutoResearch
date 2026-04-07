@@ -97,8 +97,13 @@ Also note any requirements this creates for submission, such as:
 - whether distributed launch is needed
 - any device/count/partition assumptions
 - how `submit-test` should stay fast while still exercising the real training code path
-- what reduced sample / reduced iteration behavior should be used
+- what reduced sample / reduced iteration behavior should be used — decide this yourself based on reading the training code (e.g. a `--max-epochs` flag, an env variable, a config field, or a fixed small dataset). If you are not sure, ask the user. Once you have a proposal, present it to the user and require explicit confirmation before recording it in `docs/project_overview.md`.
 - what outputs `submit-test` must generate under `test_output/`
+
+For non-SLURM setups, explicitly record:
+- How training jobs should be launched locally (e.g. background shell process, `nohup`, `screen`, etc.)
+- How to count currently running jobs (e.g. `pgrep -f train.py | wc -l`)
+- That the Infra and Baseline Builder must write local launcher scripts under `scripts/local/` and update `.automation.yaml` templates accordingly
 
 #### Section 8: Website and Deployment Setup
 State explicitly whether the user wants website setup.

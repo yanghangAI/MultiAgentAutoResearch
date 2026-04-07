@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -38,22 +39,31 @@ def deploy_dashboard(root: Path | None = None, allow_dirty: bool = False, push: 
         )
 
     html = source_path.read_text(encoding="utf-8")
-    original_branch = current_branch(root_path)
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-    try:
-        git(root_path, "checkout", "gh-pages")
-        target_path = root_path / "index.html"
-        target_path.write_text(html, encoding="utf-8")
-        git(root_path, "add", "index.html")
-        diff = git(root_path, "diff", "--cached", "--quiet", capture_output=False)
-    except subprocess.CalledProcessError as exc:
-        if exc.returncode == 1:
-            git(root_path, "commit", "-m", f"Auto-deploy website [{timestamp}]")
+    with tempfile.TemporaryDirectory(prefix="deploy-gh-pages-", dir=root_path) as temp_dir:
+        worktree_path = Path(temp_dir)
+        try:
+            git(root_path, "worktree", "add", "--detach", str(worktree_path), "gh-pages")
+            target_path = worktree_path / "index.html"
+            target_path.write_text(html, encoding="utf-8")
+            git(worktree_path, "add", "index.html")
+            git(worktree_path, "diff", "--cached", "--quiet", capture_output=False)
+            print("No dashboard changes to deploy.")
+            return
+        except subprocess.CalledProcessError as exc:
+            if exc.returncode != 1:
+                raise
+            git(worktree_path, "commit", "-m", f"Auto-deploy website [{timestamp}]")
+            deployed_rev = git(worktree_path, "rev-parse", "HEAD").stdout.strip()
+            git(root_path, "branch", "-f", "gh-pages", deployed_rev)
             if push:
-                git(root_path, "push", "origin", "gh-pages")
+                git(worktree_path, "push", "origin", f"{deployed_rev}:refs/heads/gh-pages")
             print("Dashboard deployed to gh-pages.")
-        else:
-            raise
-    finally:
-        if current_branch(root_path) != original_branch:
-            git(root_path, "checkout", original_branch)
+        finally:
+            subprocess.run(
+                ["git", "worktree", "remove", "--force", str(worktree_path)],
+                cwd=root_path,
+                check=True,
+                capture_output=True,
+                text=True,
+            )

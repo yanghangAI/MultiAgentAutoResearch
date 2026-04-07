@@ -85,15 +85,19 @@ def update_idea(idea_id: str, status: str, root: Path | None = None) -> None:
     store.ensure_csv(csv_path, IDEA_HEADERS)
     rows = store.read_dict_rows(csv_path)
     updated = False
+    changed = False
     for row in rows:
         if row.get("Idea_ID") == idea_id:
-            row["Status"] = status
+            if row.get("Status") != status:
+                row["Status"] = status
+                changed = True
             updated = True
     if not updated:
         print(f"Idea {idea_id} not found.")
         return
-    store.write_dict_rows(csv_path, IDEA_HEADERS, rows)
-    print(f"Updated idea {idea_id} to '{status}'.")
+    if changed:
+        store.write_dict_rows(csv_path, IDEA_HEADERS, rows)
+        print(f"Updated idea {idea_id} to '{status}'.")
 
 
 def add_design(
