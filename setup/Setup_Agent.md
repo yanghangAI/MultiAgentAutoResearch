@@ -22,6 +22,7 @@ Before exploring the codebase, make sure you have the path to the target project
 If helpful, also ask the user for:
 - their idea of what the project is about
 - a short summary of the project
+- whether they want to use a stronger model for the Architect role (for example, Opus) to improve high-level idea generation
 
 Use any briefing the user provides to guide your exploration, but do not rely on it blindly; verify details against the codebase.
 
@@ -45,6 +46,7 @@ If anything is genuinely ambiguous after reading, **ask the user** in a single m
 - "What training setup do you want this automation to target: CPU, single GPU, multi-GPU, SLURM, or something else?"
 - "Do you want me to set up the dashboard website and GitHub deployment flow too?"
 - "If yes, should I also set up the GitHub repo/remote configuration needed for deployment?"
+- "Do you want to use a stronger model for the Architect role, such as Opus? This can help because the Architect is responsible for high-level idea generation, and a stronger model may propose more original and better-targeted research directions."
 
 Wait for answers, then continue.
 
@@ -96,7 +98,15 @@ If the answer is yes, record:
 
 If the answer is no, say that website deployment is out of scope for this setup.
 
-#### Section 9: What Changes During Auto Research
+#### Section 9: Agent Model Preferences
+Record any user preference for stronger models on specific roles.
+
+If the user wants a stronger model for Architect, state it explicitly and note why:
+- Architect benefits from stronger reasoning because it generates the high-level research directions for the whole loop.
+
+If there is no special preference, say that default model choices should be used.
+
+#### Section 10: What Changes During Auto Research
 Two parts:
 
 **Infrastructure changes** — files and directories the agents will create or modify during the research loop:
@@ -111,7 +121,7 @@ Two parts:
 - Which architectural choices can be explored (e.g. fusion strategy, number of layers, activation functions)
 - What kinds of ideas are in scope (e.g. data augmentation, regularization, architecture variants)
 
-#### Section 10: What Never Changes
+#### Section 11: What Never Changes
 Two parts:
 
 **Infrastructure boundaries** — files and directories that must remain stable throughout the research loop:
@@ -129,16 +139,16 @@ Two parts:
 
 These invariants are the baseline contract. Every design must respect them, or results are not comparable.
 
-#### Section 11: Infra Candidates
+#### Section 12: Infra Candidates
 List of files/modules from the target project that belong in `infra/` and why.
 
-#### Section 12: Baseline Candidates
+#### Section 13: Baseline Candidates
 List of files from the target project that belong in `baseline/` and why.
 
-#### Section 13: File Bootstrap Pattern
+#### Section 14: File Bootstrap Pattern
 Glob patterns for `setup-design` to copy when creating a new design (e.g. `*.py`).
 
-#### Section 14: Open Questions
+#### Section 15: Open Questions
 Anything still uncertain that sub-agents should flag if they encounter it.
 
 ---
@@ -195,6 +205,7 @@ Write a concise summary covering:
 - Configured metrics and completion rule.
 - The exact commands to run first.
 - Any unresolved assumptions or follow-up items.
+- A clear instruction that the user should open a new Claude Code session before starting the Orchestrator.
 
 ---
 

@@ -67,9 +67,11 @@ Claude Code will take it from there. The Setup Agent:
 - Updates all agent prompts with your project's vocabulary and conventions
 - Validates the full pipeline end-to-end before handing off
 
+After setup finishes, close that setup session and open a new Claude Code session before starting the Orchestrator.
+
 ### 3. Start the research loop
 
-In Claude Code, tell it to act as the Orchestrator:
+In a new Claude Code session, tell it to act as the Orchestrator:
 
 > "Read `agents/Orchestrator/prompt.md` and act as the Orchestrator. Start the research loop."
 
