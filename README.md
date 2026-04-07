@@ -32,12 +32,12 @@ ML research is repetitive: come up with an idea, implement it, run it, check res
 
 ```
 ┌─────────────────────── Orchestrator ───────────────────────────┐
-│                                                                 │
+│                                                                │
 │  Architect → Designer → Reviewer → Builder → Reviewer          │
-│      ↑          idea     (design)    code     (code)           │
+│      ↑                  (design)              (code)           │
 │      │                                           │             │
 │      └──────────── results from training ─────── submit jobs ──┘
-└─────────────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────────────┘
                           Debugger (on-call for automation bugs)
 ```
 
@@ -73,7 +73,7 @@ Open Claude Code in this repository. Enable **bypass mode** (ask claude to do it
 
 Then tell it to act as the Setup Agent:
 
-> "Read `setup/Setup_Agent.md` and act as the Setup Agent."
+> Read `setup/Setup_Agent.md` and act as the Setup Agent.
 
 Claude Code will take it from there. The Setup Agent:
 - Reads your training code to understand metrics, config, and runtime environment
@@ -89,7 +89,7 @@ After setup finishes, close that setup session and open a new Claude Code sessio
 
 In a new Claude Code session, tell it to act as the Orchestrator:
 
-> "Read `agents/Orchestrator/prompt.md` and act as the Orchestrator. Start the research loop."
+> Read `agents/Orchestrator/prompt.md` and act as the Orchestrator. Start the research loop.
 
 The Orchestrator spawns the Architect, which reads prior results and proposes ideas. From there the loop runs autonomously — designing, implementing, reviewing, submitting — and surfaces results in the dashboard.
 
