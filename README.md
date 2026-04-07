@@ -84,6 +84,15 @@ Once set up, you interact with the framework at two levels:
 **Run CLI commands when you need a manual sync:**
 
 ```bash
+# Register a new idea explicitly
+python scripts/cli.py add-idea idea001 "Layer-wise LR Decay"
+
+# Register a new design explicitly
+python scripts/cli.py add-design idea001 design001 "Depth-aware positional embeddings"
+
+# Run lightweight structure checks before review
+python scripts/cli.py review-check runs/idea001/idea.md
+
 # After training outputs change — update all statuses
 python scripts/cli.py sync-status
 
@@ -122,12 +131,14 @@ runs/
     design_overview.csv          ← all designs under this idea
     design001/
       design.md                  ← concrete implementation spec
-      review.md                  ← Reviewer decision (APPROVED / REJECTED)
+      design_review.md           ← Reviewer design decision (APPROVED / REJECTED)
       code_review.md             ← post-implementation code audit
       code/                      ← actual implementation (bootstrapped by setup-design)
 ```
 
 Statuses are derived automatically from filesystem signals — review files, training outputs, job logs. Never edit CSVs by hand; run `sync-status` instead.
+If you create a new `runs/ideaXXX/idea.md`, include `**Idea Name:** ...` so `sync-status` can auto-register it in `runs/idea_overview.csv`.
+If you create a new `runs/<idea_id>/designXXX/design.md`, include `**Design Description:** ...` so `sync-status` can auto-register it in `runs/<idea_id>/design_overview.csv`.
 
 **Design lifecycle:**
 
@@ -196,6 +207,9 @@ website/          Generated results dashboard
 ## All CLI Commands
 
 ```bash
+python scripts/cli.py add-idea <idea_id> <idea_name> # register a new idea
+python scripts/cli.py add-design <idea_id> <design_id> <description> # register a new design
+python scripts/cli.py review-check <target> # quick idea/design structure checks
 python scripts/cli.py sync-status              # derive and update all statuses
 python scripts/cli.py summarize-results        # aggregate metrics into results.csv
 python scripts/cli.py setup-design <src> <dst> # bootstrap a new design from a source

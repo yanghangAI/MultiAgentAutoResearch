@@ -9,7 +9,7 @@ from pathlib import Path
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from scripts.lib import dashboard, deploy, results, status, submit  # noqa: E402
+from scripts.lib import dashboard, deploy, results, review, status, submit  # noqa: E402
 from scripts.lib.layout import repo_root  # noqa: E402
 
 
@@ -19,6 +19,21 @@ def build_parser() -> argparse.ArgumentParser:
 
     summarize_parser = subparsers.add_parser("summarize-results")
     summarize_parser.add_argument("--root", type=Path, default=repo_root())
+
+    add_idea_parser = subparsers.add_parser("add-idea")
+    add_idea_parser.add_argument("idea_id")
+    add_idea_parser.add_argument("idea_name")
+    add_idea_parser.add_argument("--root", type=Path, default=repo_root())
+
+    add_design_parser = subparsers.add_parser("add-design")
+    add_design_parser.add_argument("idea_id")
+    add_design_parser.add_argument("design_id")
+    add_design_parser.add_argument("description", nargs="?")
+    add_design_parser.add_argument("--root", type=Path, default=repo_root())
+
+    review_parser = subparsers.add_parser("review-check")
+    review_parser.add_argument("target", type=Path)
+    review_parser.add_argument("--root", type=Path, default=repo_root())
 
     sync_parser = subparsers.add_parser("sync-status")
     sync_parser.add_argument("--root", type=Path, default=repo_root())
@@ -63,6 +78,12 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "summarize-results":
         results.summarize_results(root=args.root)
+    elif args.command == "add-idea":
+        status.add_idea(args.idea_id, args.idea_name, root=args.root)
+    elif args.command == "add-design":
+        status.add_design(args.idea_id, args.design_id, args.description, root=args.root)
+    elif args.command == "review-check":
+        review.review_check(args.target, root=args.root)
     elif args.command == "sync-status":
         status.sync_all(root=args.root)
     elif args.command == "submit-implemented":

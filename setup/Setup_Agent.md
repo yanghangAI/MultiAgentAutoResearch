@@ -18,6 +18,7 @@ Read the target project directory thoroughly:
 - Config files and how output paths are set.
 - Metrics logged and where (CSV, JSON, stdout) — exact column names.
 - Runtime environment (local, SLURM, cloud).
+- Training execution setup required by the user (CPU, single GPU, multi-GPU, SLURM, or another mode).
 - Shared utilities suitable for `infra/` (dataset loaders, metrics, logging, constants).
 - Canonical starting implementation suitable for `baseline/`.
 - File types that should be copied when bootstrapping a new design.
@@ -26,6 +27,7 @@ If anything is genuinely ambiguous after reading, **ask the user** in a single m
 - "I see two validation metrics — `val_loss` and `val_acc`. Which is the primary metric?"
 - "How many epochs marks a run as done?"
 - "Your submit scripts reference partition `gpu` — is that correct for your cluster?"
+- "What training setup do you want this automation to target: CPU, single GPU, multi-GPU, SLURM, or something else?"
 
 Wait for answers, then continue.
 
@@ -53,7 +55,20 @@ What epoch count (or other signal) marks a run as `Done`.
 #### Section 6: Runtime Environment
 Local / SLURM / cloud, submit command patterns.
 
-#### Section 7: What Changes During Auto Research
+#### Section 7: Training Setup
+The user-approved execution mode for this project. State it explicitly, for example:
+- CPU
+- single GPU
+- multi-GPU
+- SLURM
+- another custom environment
+
+Also note any requirements this creates for submission, such as:
+- whether `submit-implemented` should launch local processes or scheduler jobs
+- whether distributed launch is needed
+- any device/count/partition assumptions
+
+#### Section 8: What Changes During Auto Research
 Two parts:
 
 **Infrastructure changes** — files and directories the agents will create or modify during the research loop:
@@ -68,7 +83,7 @@ Two parts:
 - Which architectural choices can be explored (e.g. fusion strategy, number of layers, activation functions)
 - What kinds of ideas are in scope (e.g. data augmentation, regularization, architecture variants)
 
-#### Section 8: What Never Changes
+#### Section 9: What Never Changes
 Two parts:
 
 **Infrastructure boundaries** — files and directories that must remain stable throughout the research loop:
@@ -86,16 +101,16 @@ Two parts:
 
 These invariants are the baseline contract. Every design must respect them, or results are not comparable.
 
-#### Section 9: Infra Candidates
+#### Section 10: Infra Candidates
 List of files/modules from the target project that belong in `infra/` and why.
 
-#### Section 10: Baseline Candidates
+#### Section 11: Baseline Candidates
 List of files from the target project that belong in `baseline/` and why.
 
-#### Section 11: File Bootstrap Pattern
+#### Section 12: File Bootstrap Pattern
 Glob patterns for `setup-design` to copy when creating a new design (e.g. `*.py`).
 
-#### Section 12: Open Questions
+#### Section 13: Open Questions
 Anything still uncertain that sub-agents should flag if they encounter it.
 
 ---
@@ -119,13 +134,15 @@ Once the user approves the overview, update `.automation.yaml`:
 - `submit.*_command_template`, `submit.job_count_command`
 - `dashboard.github_repo_url` (if known)
 
+The `submit.*` configuration must match the user-approved training setup recorded in `docs/project_overview.md`.
+
 Then spawn both sub-agents at the same time. Each receives the path to `docs/project_overview.md` as its sole briefing.
 
 **Sub-agent A — Prompt Updater** (`setup/Prompt_Updater_Agent.md`)
 Updates all agent prompts in `agents/*/prompt.md` to use the target project's vocabulary, file paths, metric names, and constraints.
 
 **Sub-agent B — Infra and Baseline Builder** (`setup/Infra_Baseline_Agent.md`)
-Writes, tests, and documents `infra/` and `baseline/`.
+Writes, tests, and documents `infra/` and `baseline/`, and adapts submission-related setup to the training mode recorded in `docs/project_overview.md`.
 
 ### Step 5 — Validate end-to-end
 

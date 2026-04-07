@@ -45,7 +45,10 @@ def init_status_fixture(root: Path) -> None:
         ["Design_ID", "Design_Description", "Status"],
         [["design001", "first", "Designed"], ["design002", "second", "Designed"]],
     )
-    (root / "runs" / "idea001" / "idea.md").write_text("**Expected Designs:** 2\n", encoding="utf-8")
+    (root / "runs" / "idea001" / "idea.md").write_text(
+        "**Idea Name:** Idea One\n**Expected Designs:** 2\n",
+        encoding="utf-8",
+    )
     (root / "runs" / "idea001" / "design001").mkdir(parents=True, exist_ok=True)
     (root / "runs" / "idea001" / "design002").mkdir(parents=True, exist_ok=True)
 
@@ -98,7 +101,7 @@ def test_status_derivation_from_reviews_and_expected_designs(tmp_path: Path) -> 
         "APPROVED\n",
         encoding="utf-8",
     )
-    (tmp_path / "runs" / "idea001" / "design002" / "review.md").write_text(
+    (tmp_path / "runs" / "idea001" / "design002" / "design_review.md").write_text(
         "APPROVED\n",
         encoding="utf-8",
     )
@@ -144,6 +147,193 @@ def test_sync_status_cli_updates_csvs(tmp_path: Path) -> None:
     assert "design001,first,Done" in design_csv
     assert "design002,second,Implemented" in design_csv
     assert "idea001,Idea One,Implemented" in idea_csv
+
+
+def test_add_idea_cli_registers_idea_and_creates_design_tracker(tmp_path: Path) -> None:
+    result = run_cli(tmp_path, "add-idea", "idea002", "Idea Two")
+
+    assert result.returncode == 0, result.stderr
+    idea_csv = (tmp_path / "runs" / "idea_overview.csv").read_text(encoding="utf-8")
+    design_csv = (tmp_path / "runs" / "idea002" / "design_overview.csv").read_text(encoding="utf-8")
+    assert "idea002,Idea Two,Not Designed" in idea_csv
+    assert design_csv == "Design_ID,Design_Description,Status\n"
+
+
+def test_sync_status_auto_registers_new_idea_folder(tmp_path: Path) -> None:
+    idea_dir = tmp_path / "runs" / "idea002"
+    idea_dir.mkdir(parents=True)
+    (idea_dir / "idea.md").write_text(
+        "**Idea Name:** Depth-Aware Augmentation\n**Expected Designs:** 1\n**Baseline Source:** baseline/\n",
+        encoding="utf-8",
+    )
+
+    result = run_cli(tmp_path, "sync-status")
+
+    assert result.returncode == 0, result.stderr
+    idea_csv = (tmp_path / "runs" / "idea_overview.csv").read_text(encoding="utf-8")
+    design_csv = (tmp_path / "runs" / "idea002" / "design_overview.csv").read_text(encoding="utf-8")
+    assert "idea002,Depth-Aware Augmentation,Not Designed" in idea_csv
+    assert design_csv == "Design_ID,Design_Description,Status\n"
+
+
+def test_add_design_cli_registers_design_and_creates_directory(tmp_path: Path) -> None:
+    write_csv(
+        tmp_path / "runs" / "idea001" / "design_overview.csv",
+        ["Design_ID", "Design_Description", "Status"],
+        [],
+    )
+
+    result = run_cli(tmp_path, "add-design", "idea001", "design003", "Third Design")
+
+    assert result.returncode == 0, result.stderr
+    design_csv = (tmp_path / "runs" / "idea001" / "design_overview.csv").read_text(encoding="utf-8")
+    assert "design003,Third Design,Not Implemented" in design_csv
+    assert (tmp_path / "runs" / "idea001" / "design003").is_dir()
+
+
+def test_add_design_cli_parses_description_from_design_md(tmp_path: Path) -> None:
+    write_csv(
+        tmp_path / "runs" / "idea001" / "design_overview.csv",
+        ["Design_ID", "Design_Description", "Status"],
+        [],
+    )
+    design_dir = tmp_path / "runs" / "idea001" / "design004"
+    design_dir.mkdir(parents=True)
+    (design_dir / "design.md").write_text(
+        "**Design Description:** Fourth Design\n",
+        encoding="utf-8",
+    )
+
+    result = run_cli(tmp_path, "add-design", "idea001", "design004")
+
+    assert result.returncode == 0, result.stderr
+    design_csv = (tmp_path / "runs" / "idea001" / "design_overview.csv").read_text(encoding="utf-8")
+    assert "design004,Fourth Design,Not Implemented" in design_csv
+
+
+def test_sync_status_auto_registers_new_design_folder(tmp_path: Path) -> None:
+    write_csv(
+        tmp_path / "runs" / "idea001" / "design_overview.csv",
+        ["Design_ID", "Design_Description", "Status"],
+        [],
+    )
+    write_csv(
+        tmp_path / "runs" / "idea_overview.csv",
+        ["Idea_ID", "Idea_Name", "Status"],
+        [["idea001", "Idea One", "Not Designed"]],
+    )
+    (tmp_path / "runs" / "idea001" / "idea.md").write_text(
+        "**Idea Name:** Idea One\n**Expected Designs:** 1\n",
+        encoding="utf-8",
+    )
+    design_dir = tmp_path / "runs" / "idea001" / "design003"
+    design_dir.mkdir(parents=True)
+    (design_dir / "design.md").write_text(
+        "**Design Description:** Stronger Augmentation Sweep\n",
+        encoding="utf-8",
+    )
+    (design_dir / "design_review.md").write_text("APPROVED\n", encoding="utf-8")
+
+    result = run_cli(tmp_path, "sync-status")
+
+    assert result.returncode == 0, result.stderr
+    design_csv = (tmp_path / "runs" / "idea001" / "design_overview.csv").read_text(encoding="utf-8")
+    idea_csv = (tmp_path / "runs" / "idea_overview.csv").read_text(encoding="utf-8")
+    assert "design003,Stronger Augmentation Sweep,Not Implemented" in design_csv
+    assert "idea001,Idea One,Designed" in idea_csv
+
+
+def test_sync_status_skips_unapproved_new_design_folder(tmp_path: Path) -> None:
+    write_csv(
+        tmp_path / "runs" / "idea001" / "design_overview.csv",
+        ["Design_ID", "Design_Description", "Status"],
+        [],
+    )
+    write_csv(
+        tmp_path / "runs" / "idea_overview.csv",
+        ["Idea_ID", "Idea_Name", "Status"],
+        [["idea001", "Idea One", "Not Designed"]],
+    )
+    (tmp_path / "runs" / "idea001" / "idea.md").write_text(
+        "**Idea Name:** Idea One\n**Expected Designs:** 1\n",
+        encoding="utf-8",
+    )
+    design_dir = tmp_path / "runs" / "idea001" / "design004"
+    design_dir.mkdir(parents=True)
+    (design_dir / "design.md").write_text(
+        "**Design Description:** Unapproved Sweep\n",
+        encoding="utf-8",
+    )
+
+    result = run_cli(tmp_path, "sync-status")
+
+    assert result.returncode == 0, result.stderr
+    design_csv = (tmp_path / "runs" / "idea001" / "design_overview.csv").read_text(encoding="utf-8")
+    idea_csv = (tmp_path / "runs" / "idea_overview.csv").read_text(encoding="utf-8")
+    assert "design004,Unapproved Sweep,Not Implemented" not in design_csv
+    assert "idea001,Idea One,Not Designed" in idea_csv
+
+
+def test_review_check_passes_for_valid_idea(tmp_path: Path) -> None:
+    idea_dir = tmp_path / "runs" / "idea003"
+    idea_dir.mkdir(parents=True)
+    (idea_dir / "idea.md").write_text(
+        "**Idea Name:** Temporal Fusion\n**Expected Designs:** 2\n**Baseline Source:** baseline/\n",
+        encoding="utf-8",
+    )
+
+    result = run_cli(tmp_path, "review-check", "runs/idea003/idea.md")
+
+    assert result.returncode == 0, result.stderr
+    assert "Idea review check passed" in result.stdout
+
+
+def test_review_check_fails_for_invalid_idea(tmp_path: Path) -> None:
+    idea_dir = tmp_path / "runs" / "idea003"
+    idea_dir.mkdir(parents=True)
+    (idea_dir / "idea.md").write_text(
+        "**Idea Name:** Temporal Fusion\n**Expected Designs:** nope\n",
+        encoding="utf-8",
+    )
+
+    result = run_cli(tmp_path, "review-check", "runs/idea003/idea.md")
+
+    assert result.returncode != 0
+    assert "Missing required field `**Baseline Source:**`." in result.stdout
+    assert "`**Expected Designs:**` must be a positive integer." in result.stdout
+
+
+def test_review_check_passes_for_valid_design(tmp_path: Path) -> None:
+    design_dir = tmp_path / "runs" / "idea003" / "design001"
+    design_dir.mkdir(parents=True)
+    (design_dir / "design.md").write_text(
+        "**Design Description:** Short Sweep\n"
+        "**Starting Point:** baseline/\n"
+        "Files to change: code/train.py\n"
+        "Algorithm changes: add temporal fusion block\n"
+        "Config values: fusion_width=64\n",
+        encoding="utf-8",
+    )
+
+    result = run_cli(tmp_path, "review-check", "runs/idea003/design001")
+
+    assert result.returncode == 0, result.stderr
+    assert "Design review check passed" in result.stdout
+
+
+def test_review_check_fails_for_invalid_design(tmp_path: Path) -> None:
+    design_dir = tmp_path / "runs" / "idea003" / "design001"
+    design_dir.mkdir(parents=True)
+    (design_dir / "design.md").write_text(
+        "**Design Description:** Short Sweep\n",
+        encoding="utf-8",
+    )
+
+    result = run_cli(tmp_path, "review-check", "runs/idea003/design001")
+
+    assert result.returncode != 0
+    assert "Missing required field `**Starting Point:**`." in result.stdout
+    assert "Design should explicitly cover config-level details." in result.stdout
 
 
 def test_submit_implemented_dry_run_uses_canonical_train_path(tmp_path: Path) -> None:

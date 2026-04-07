@@ -25,6 +25,9 @@ Run these from the repo root:
 
 ```bash
 python scripts/cli.py summarize-results
+python scripts/cli.py add-idea idea001 "My New Idea"
+python scripts/cli.py add-design idea001 design001 "My New Design"
+python scripts/cli.py review-check runs/idea001/idea.md
 python scripts/cli.py sync-status
 python scripts/cli.py setup-design baseline/ runs/idea001/design001
 python scripts/cli.py submit-test runs/idea001/design001
@@ -39,8 +42,14 @@ What each command does:
 
 - `summarize-results`
   Scans `runs/` for `metrics.csv` files using `.automation.yaml` discovery settings and writes a consolidated `results.csv`.
+- `add-idea <idea_id> <idea_name>`
+  Registers a new idea in `runs/idea_overview.csv` and initializes `runs/<idea_id>/design_overview.csv`.
+- `add-design <idea_id> <design_id> <description>`
+  Registers an approved design in `runs/<idea_id>/design_overview.csv` and initializes `runs/<idea_id>/<design_id>/`. If `<description>` is omitted, it is parsed from `**Design Description:** ...` in `design.md`.
+- `review-check <target>`
+  Runs lightweight structural checks on an `idea.md`, `design.md`, or their parent folders before the full review pass.
 - `sync-status`
-  Regenerates `results.csv` and then updates idea and design statuses in the overview CSVs based on metrics, review files, and SLURM outputs.
+  Regenerates `results.csv`, auto-registers any untracked `runs/ideaXXX/idea.md` and `runs/<idea_id>/designXXX/design.md` folders by parsing `**Idea Name:** ...` and `**Design Description:** ...`, and then updates idea and design statuses in the overview CSVs based on metrics, review files, and SLURM outputs.
 - `setup-design <src> <dst>`
   Copies files from a baseline or prior design into the destination layout according to `.automation.yaml` (`setup_design.source_globs`, destination subdir, optional output patch rule).
 - `submit-test <design_dir>`

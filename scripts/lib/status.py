@@ -12,6 +12,31 @@ IDEA_HEADERS = ["Idea_ID", "Idea_Name", "Status"]
 DESIGN_HEADERS = ["Design_ID", "Design_Description", "Status"]
 
 
+def _parse_bold_field(content: str, field_name: str) -> str | None:
+    pattern = rf"\*\*{re.escape(field_name)}:\*\*\s*(.+)"
+    match = re.search(pattern, content)
+    if not match:
+        return None
+    value = match.group(1).strip()
+    return value or None
+
+
+def infer_idea_name(idea_id: str, root: Path | None = None) -> str:
+    content = store.read_text(layout.idea_md_path(idea_id, root))
+    parsed = _parse_bold_field(content, "Idea Name")
+    if parsed:
+        return parsed
+    return idea_id
+
+
+def infer_design_description(idea_id: str, design_id: str, root: Path | None = None) -> str:
+    content = store.read_text(layout.design_dir(idea_id, design_id, root) / "design.md")
+    parsed = _parse_bold_field(content, "Design Description")
+    if parsed:
+        return parsed
+    return design_id
+
+
 def get_expected_designs(idea_id: str, root: Path | None = None) -> int | None:
     content = store.read_text(layout.idea_md_path(idea_id, root))
     if not content:
@@ -25,6 +50,7 @@ def get_expected_designs(idea_id: str, root: Path | None = None) -> int | None:
 def add_idea(idea_id: str, idea_name: str, status: str = Status.NOT_DESIGNED, root: Path | None = None) -> None:
     csv_path = layout.idea_csv_path(root)
     store.ensure_csv(csv_path, IDEA_HEADERS)
+    store.ensure_csv(layout.design_csv_path(idea_id, root), DESIGN_HEADERS)
     rows = store.read_dict_rows(csv_path)
     for row in rows:
         if row.get("Idea_ID") == idea_id:
@@ -32,6 +58,26 @@ def add_idea(idea_id: str, idea_name: str, status: str = Status.NOT_DESIGNED, ro
             return
     store.append_csv_row(csv_path, [idea_id, idea_name, status])
     print(f"Added idea {idea_id}.")
+
+
+def register_missing_ideas(root: Path | None = None) -> None:
+    csv_path = layout.idea_csv_path(root)
+    store.ensure_csv(csv_path, IDEA_HEADERS)
+    tracked_ids = {
+        row.get("Idea_ID", "")
+        for row in store.read_dict_rows(csv_path)
+        if row.get("Idea_ID")
+    }
+    for idea_dir in sorted(layout.runs_dir(root).glob("idea*")):
+        if not idea_dir.is_dir():
+            continue
+        idea_id = idea_dir.name
+        if idea_id in tracked_ids:
+            continue
+        if not layout.idea_md_path(idea_id, root).exists():
+            continue
+        add_idea(idea_id, infer_idea_name(idea_id, root=root), root=root)
+        tracked_ids.add(idea_id)
 
 
 def update_idea(idea_id: str, status: str, root: Path | None = None) -> None:
@@ -53,12 +99,16 @@ def update_idea(idea_id: str, status: str, root: Path | None = None) -> None:
 def add_design(
     idea_id: str,
     design_id: str,
-    description: str,
+    description: str | None = None,
     status: str = Status.NOT_IMPLEMENTED,
     root: Path | None = None,
 ) -> None:
+    store.ensure_csv(layout.idea_csv_path(root), IDEA_HEADERS)
     csv_path = layout.design_csv_path(idea_id, root)
     store.ensure_csv(csv_path, DESIGN_HEADERS)
+    layout.design_dir(idea_id, design_id, root).mkdir(parents=True, exist_ok=True)
+    if description is None:
+        description = infer_design_description(idea_id, design_id, root=root)
     rows = store.read_dict_rows(csv_path)
     for row in rows:
         if row.get("Design_ID") == design_id:
@@ -66,6 +116,35 @@ def add_design(
             return
     store.append_csv_row(csv_path, [design_id, description, status])
     print(f"Added design {design_id} to {idea_id}.")
+
+
+def register_missing_designs(root: Path | None = None) -> None:
+    cfg = load_project_config(root)
+    for idea_row in store.read_dict_rows(layout.idea_csv_path(root)):
+        idea_id = idea_row.get("Idea_ID", "")
+        if not idea_id:
+            continue
+        csv_path = layout.design_csv_path(idea_id, root)
+        store.ensure_csv(csv_path, DESIGN_HEADERS)
+        tracked_ids = {
+            row.get("Design_ID", "")
+            for row in store.read_dict_rows(csv_path)
+            if row.get("Design_ID")
+        }
+        idea_dir = layout.idea_dir(idea_id, root)
+        for design_dir in sorted(idea_dir.glob("design*")):
+            if not design_dir.is_dir():
+                continue
+            design_id = design_dir.name
+            if design_id in tracked_ids:
+                continue
+            if not (design_dir / "design.md").exists():
+                continue
+            review = store.read_text(design_dir / "design_review.md")
+            if cfg.status.approved_token not in review:
+                continue
+            add_design(idea_id, design_id, root=root)
+            tracked_ids.add(design_id)
 
 
 def update_design(idea_id: str, design_id: str, status: str, root: Path | None = None) -> None:
@@ -186,7 +265,7 @@ def derive_design_status(
             return Status.SUBMITTED
         return Status.IMPLEMENTED
 
-    review = store.read_text(design_path / "review.md")
+    review = store.read_text(design_path / "design_review.md")
     if cfg.status.approved_token in review:
         return Status.NOT_IMPLEMENTED
     return None
@@ -240,6 +319,8 @@ def auto_update_status(
 def sync_all(root: Path | None = None) -> None:
     print("Running summarize_results...")
     results_service.summarize_results(root=root)
+    register_missing_ideas(root=root)
+    register_missing_designs(root=root)
 
     idea_rows = store.read_dict_rows(layout.idea_csv_path(root))
     if not idea_rows:

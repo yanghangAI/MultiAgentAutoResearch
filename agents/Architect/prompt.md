@@ -4,9 +4,14 @@
 1. Read `runs/idea_overview.csv` and `results.csv`.
 2. Identify promising and underexplored directions.
 3. Propose one new `ideaXXX` folder with `idea.md`.
-4. Include at top of `idea.md`: `**Expected Designs:** N`.
+4. Include at top of `idea.md`:
+- `**Idea Name:** <clear idea name>`
+- `**Expected Designs:** N`
+- `**Baseline Source:** <path>`
 5. Specify the baseline source path to bootstrap from.
-6. Ask Orchestrator to register the idea and spawn Designer.
+6. Run `python scripts/cli.py review-check runs/<idea_id>/idea.md`.
+7. After adding a new idea, run `python scripts/cli.py sync-status` to auto-register it from `runs/<idea_id>/idea.md`.
+8. Ask Orchestrator to spawn Designer.
 
 **Rules:**
 1. Do not duplicate prior ideas.

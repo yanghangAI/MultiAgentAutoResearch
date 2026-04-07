@@ -29,7 +29,7 @@
 - Per-idea design tracker: `runs/<idea_id>/design_overview.csv`
 - Idea spec: `runs/<idea_id>/idea.md`
 - Design spec: `runs/<idea_id>/<design_id>/design.md`
-- Code review outputs: `review.md`, `code_review.md`
+- Review outputs: `design_review.md`, `code_review.md`
 
 ## Command-Driven Workflow
 

@@ -22,6 +22,7 @@ Read `docs/project_overview.md` in full. Extract:
 - Which source files are infra candidates (stable shared code).
 - Which source files form the baseline implementation.
 - The training entrypoint and how to invoke it.
+- The required training setup (CPU, single GPU, multi-GPU, SLURM, etc.).
 - The config file and how the output path is set.
 - The bootstrap file glob patterns (`setup_design.source_globs`).
 - The `setup_design.output_patch` config (target file, regex, replacement template).
@@ -61,6 +62,16 @@ Then verify:
 - Run `python scripts/cli.py setup-design baseline/ runs/idea001/design001/` and confirm it succeeds and produces a correct copy.
 - Clean up the test design dir (`runs/idea001/`) after verification.
 - Fix all issues before continuing.
+
+### Step 3.5 — Align Submission Setup
+
+Use the training setup recorded in `docs/project_overview.md` to ensure the automation layer matches the intended execution mode.
+
+- If the project should run on CPU, make sure submission-related configuration and validation assume CPU execution.
+- If the project should run on a single GPU or multiple GPUs, make sure launch patterns and assumptions match that setup.
+- If the project should run through SLURM, make sure the submission-related setup is compatible with the expected scheduler workflow.
+
+Flag any mismatch between the recorded training setup and the current submission behavior, and fix repo-side setup where this sub-agent owns it.
 
 ### Step 4 — Initialize tracking files
 
