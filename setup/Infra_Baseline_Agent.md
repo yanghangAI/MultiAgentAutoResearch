@@ -37,6 +37,8 @@ Copy or write the shared stable code into `infra/`:
 - Metrics and evaluation helpers.
 - Logging and checkpoint helpers.
 - Shared constants and reusable functions.
+- **Research invariants as code** — any hyperparameter, config value, or setting listed in the research invariants section of `docs/project_overview.md` (e.g. fixed number of epochs, fixed backbone, fixed evaluation protocol, fixed loss signature) must be defined in `infra/` as importable constants or config, not hardcoded in each design. The baseline and all designs should import these values from `infra/` rather than redefining them.
+- **Validation functions** — the evaluation/validation logic (e.g. metric computation, scoring, evaluation loop) must live in `infra/` so all designs use an identical evaluation protocol. Only move validation code into a design if it is genuinely inseparable from the model architecture and cannot reasonably be decoupled.
 
 Rules:
 - Only include code that is shared across experiment designs and should not change between runs.
@@ -57,6 +59,7 @@ Copy or write the canonical starting implementation into `baseline/`:
 
 Rules:
 - The baseline must be self-contained: runnable from its directory without depending on files outside `baseline/` and `infra/`.
+- Do not let the baseline import or reference code from the original project directory. All code the baseline needs must either be copied into `baseline/` or live in `infra/`. The only exception is code that is part of the original project's infrastructure (e.g. a large dataset library or compiled extension) that is genuinely too complex to copy — in that case, document the dependency explicitly in `baseline/README.md` and flag it in the handoff summary.
 - The config file must contain the output path field matched by `setup_design.output_patch.regex`.
 - Write `baseline/README.md` describing contents and how to use it as a bootstrap source.
 

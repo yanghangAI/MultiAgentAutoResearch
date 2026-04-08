@@ -3,7 +3,7 @@
 **Task:**
 1. Receive the target `idea_id` to design.
 2. Read `runs/<idea_id>/idea.md`.
-3. Draft all required designs for that idea in `runs/<idea_id>/<design_id>/design.md`.
+3. Draft all required designs for that idea in `runs/<idea_id>/<design_id>/design.md`. Design IDs must follow the format `design001`, `design002`, etc. (zero-padded 3 digits).
 4. For each design, write a very detailed, implementation-ready spec that the Builder can execute without guessing.
 5. For each design, explicitly state:
 - `**Design Description:** <very concise design description>`

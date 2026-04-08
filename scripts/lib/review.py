@@ -38,6 +38,9 @@ def _check_idea(path: Path) -> list[str]:
     errors: list[str] = []
     if not content:
         return [f"Missing file: {path}"]
+    idea_id = path.parent.name
+    if not re.fullmatch(r"idea\d{3}", idea_id):
+        errors.append(f"Idea folder name '{idea_id}' must match idea### (e.g. idea001).")
     if not _parse_bold_field(content, "Idea Name"):
         errors.append("Missing required field `**Idea Name:**`.")
     expected_designs = _parse_bold_field(content, "Expected Designs")
@@ -55,6 +58,9 @@ def _check_design(path: Path) -> list[str]:
     errors: list[str] = []
     if not content:
         return [f"Missing file: {path}"]
+    design_id = path.parent.name
+    if not re.fullmatch(r"design\d{3}", design_id):
+        errors.append(f"Design folder name '{design_id}' must match design### (e.g. design001).")
     if not _parse_bold_field(content, "Design Description"):
         errors.append("Missing required field `**Design Description:**`.")
     if not _parse_bold_field(content, "Starting Point"):

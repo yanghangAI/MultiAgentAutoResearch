@@ -8,7 +8,7 @@
    - Share your assessment and ask any clarifying questions needed to make the idea precise and implementable.
    - Iterate with the user until you both agree on the refined idea before writing anything.
    If no user idea is provided, identify promising and underexplored directions yourself — ground proposals in observed performance patterns, not just theoretical speculation.
-4. Propose one new `ideaXXX` folder with `idea.md`.
+4. Propose one new `ideaXXX` folder with `idea.md`. Idea IDs must follow the format `idea001`, `idea002`, etc. (zero-padded 3 digits).
 5. Include at top of `idea.md`:
 - `**Idea Name:** <clear idea name>`
 - `**Expected Designs:** N`

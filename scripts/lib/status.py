@@ -48,6 +48,8 @@ def get_expected_designs(idea_id: str, root: Path | None = None) -> int | None:
 
 
 def add_idea(idea_id: str, idea_name: str, status: str = Status.NOT_DESIGNED, root: Path | None = None) -> None:
+    if not re.fullmatch(r"idea\d{3}", idea_id):
+        raise SystemExit(f"Invalid idea_id '{idea_id}'. Must match idea### (e.g. idea001).")
     csv_path = layout.idea_csv_path(root)
     store.ensure_csv(csv_path, IDEA_HEADERS)
     store.ensure_csv(layout.design_csv_path(idea_id, root), DESIGN_HEADERS)
@@ -107,6 +109,8 @@ def add_design(
     status: str = Status.NOT_IMPLEMENTED,
     root: Path | None = None,
 ) -> None:
+    if not re.fullmatch(r"design\d{3}", design_id):
+        raise SystemExit(f"Invalid design_id '{design_id}'. Must match design### (e.g. design001).")
     store.ensure_csv(layout.idea_csv_path(root), IDEA_HEADERS)
     csv_path = layout.design_csv_path(idea_id, root)
     store.ensure_csv(csv_path, DESIGN_HEADERS)
