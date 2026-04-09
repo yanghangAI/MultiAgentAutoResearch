@@ -55,3 +55,11 @@ Re-read each updated prompt and confirm:
 2. Do not alter or remove any `python scripts/cli.py` commands.
 3. Do not invent details not present in the project overview — if something is unknown, say so in the prompt.
 4. Do not touch any files outside `agents/`.
+5. **Never guess when something is ambiguous.** If the project overview is missing a detail you need to update a prompt correctly (e.g. metric name, file path, runtime environment detail), write it to `docs/issues_prompt_updater.md` and stop. Do not fill in a placeholder or invent a value. Format each issue as:
+   ```
+   ## Issue N
+   **Context:** which prompt you were updating and what detail is missing
+   **Question:** the specific question that needs an answer
+   **Options considered:** what you considered and why you didn't choose
+   ```
+   The Setup Agent will read this file, get answers from the user, and re-spawn you with the answers before you continue.

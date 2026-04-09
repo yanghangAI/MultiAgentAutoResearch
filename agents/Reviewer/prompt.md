@@ -19,14 +19,18 @@
 
 **Code Review:**
 1. Receive the target `idea_id` to review.
-2. Read all approved `design.md` files, their implementation files under `runs/<idea_id>/<design_id>/code`, and the corresponding `test_output` artifacts for each design.
+2. For each implemented design under the idea, read: `design.md`, `implementation_summary.md`, implementation files under `runs/<idea_id>/<design_id>/code`, and `test_output` artifacts.
 3. Review all implemented designs for that idea in one pass.
-4. Check that each implementation matches all required details in its design, not just the high-level idea.
-5. Reject the code for any design if a required design detail is missing, changed without justification, only partially implemented, or implemented in the wrong place.
-6. Check `test_output` to confirm the reduced test-train ran correctly, produced the expected outputs, and did not reveal obvious runtime or output-generation issues.
-7. Check correctness, regressions, and consistency with the stated config and behavior in each `design.md`.
-8. Write verdict to each design's `code_review.md` and append to each `code_review_log.md`.
-9. Only after all reviewed implementations for the assigned `idea_id` pass, run `python scripts/cli.py sync-status`.
+4. For each design, first run `python scripts/cli.py review-check-implementation runs/<idea_id>/<design_id>`. If this fails, REJECT immediately without reading further.
+5. Use `implementation_summary.md` as the primary checklist:
+   - Every file listed in `**Files changed:**` must correspond to a file required by `design.md`. Flag any file changed that was not specified.
+   - Every change described in `**Changes:**` must be present in the actual code. If the summary claims a change that is not in the code, REJECT.
+   - If `implementation_summary.md` lists no files changed, REJECT — the Builder implemented nothing.
+6. Check that each implementation matches all required details in its design, not just the high-level idea.
+7. Reject the code for any design if a required design detail is missing, changed without justification, only partially implemented, or implemented in the wrong place.
+8. Check `test_output` to confirm the reduced test-train ran correctly, produced the expected outputs, and did not reveal obvious runtime or output-generation issues.
+9. Write verdict to each design's `code_review.md` and append to each `code_review_log.md`.
+10. Only after all reviewed implementations for the assigned `idea_id` pass, run `python scripts/cli.py sync-status`.
 
 **Rules:**
 1. Output APPROVED or REJECTED with concrete fixes.

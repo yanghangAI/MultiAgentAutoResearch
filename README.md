@@ -160,13 +160,17 @@ All behavior is controlled by `.automation.yaml`. The key fields:
     "done_epoch": 100
   },
   "submit": {
-    "submit_train_command_template": "{root}/scripts/slurm/submit_train.sh {train_script} {job_name}"
+    "submit_train_command_template": "bash {root}/scripts/local/submit_train.sh {train_script} {job_name}",
+    "submit_test_command_template": "bash {root}/scripts/local/submit_test.sh {target_dir} {test_output}",
+    "job_count_command": "pgrep -f train.py | wc -l"
   },
   "dashboard": {
     "github_repo_url": "https://github.com/your-org/your-repo"
   }
 }
 ```
+
+The Setup Agent configures these fields for your environment. Reference implementations for Slurm and local runners live in `scripts/examples/`.
 
 The Setup Agent fills this in for you. You only need to touch it if your project's metrics or compute environment changes.
 
@@ -188,7 +192,8 @@ runs/             Live experiment tracker (ideas, designs, statuses)
 scripts/
   cli.py          Main CLI entrypoint
   lib/            Core automation modules
-  slurm/          HPC job submission scripts
+  local/          Your environment's submission scripts (created by Setup Agent)
+  examples/       Reference submission scripts (slurm/, local/)
 setup/            Agent prompts for initial project setup
 website/          Generated results dashboard
 .automation.yaml  Project configuration
@@ -220,6 +225,7 @@ If you create a new `runs/<idea_id>/designXXX/design.md`, include `**Design Desc
 ```
 Not Implemented → Implement Failed
 Not Implemented → Implemented → Submitted → Training → Done
+                                         → Training Failed
 ```
 
 **Idea lifecycle** (derived from its designs):
@@ -233,9 +239,12 @@ Not Designed → Designed → Implemented → Training → Done
 ## All CLI Commands
 
 ```bash
+python scripts/cli.py validate-config                 # check .automation.yaml static fields
+python scripts/cli.py validate-config --search-dir <dir> # also verify metrics glob + columns against real output
 python scripts/cli.py add-idea <idea_id> <idea_name> # register a new idea
 python scripts/cli.py add-design <idea_id> <design_id> <description> # register a new design
 python scripts/cli.py review-check <target> # quick idea/design structure checks
+python scripts/cli.py review-check-implementation <design_dir> # verify implementation_summary.md before code review
 python scripts/cli.py sync-status              # derive and update all statuses
 python scripts/cli.py summarize-results        # aggregate metrics into results.csv
 python scripts/cli.py setup-design <src> <dst> # bootstrap a new design from a source

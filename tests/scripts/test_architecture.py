@@ -10,7 +10,10 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.lib import layout
+import time
+
 from scripts.lib.dashboard import build_dashboard
+from scripts.lib.project_config import ProjectConfig, StatusConfig
 from scripts.lib.results import summarize_results
 from scripts.lib.status import derive_design_status, derive_idea_status, get_expected_designs
 
@@ -116,7 +119,7 @@ def test_status_derivation_marks_submitted_and_training(tmp_path: Path) -> None:
     init_status_fixture(tmp_path)
     design = tmp_path / "runs" / "idea001" / "design001"
     (design / "code_review.md").write_text("APPROVED\n", encoding="utf-8")
-    (design / "slurm_123.out").write_text("submitted\n", encoding="utf-8")
+    (design / "job_submitted.txt").write_text("Submitted: idea001-design001\n", encoding="utf-8")
     write_csv(
         tmp_path / "results.csv",
         ["idea_id", "design_id", "epoch", "train_mpjpe_weighted", "val_mpjpe_weighted"],
@@ -125,6 +128,31 @@ def test_status_derivation_marks_submitted_and_training(tmp_path: Path) -> None:
 
     assert derive_design_status("idea001", "design001", root=tmp_path) == "Submitted"
     assert derive_design_status("idea001", "design002", root=tmp_path) == "Training"
+
+
+def test_status_derivation_marks_submission_stale(tmp_path: Path) -> None:
+    init_status_fixture(tmp_path)
+    design = tmp_path / "runs" / "idea001" / "design001"
+    (design / "code_review.md").write_text("APPROVED\n", encoding="utf-8")
+    submitted_path = design / "job_submitted.txt"
+    submitted_path.write_text("Submitted: idea001-design001\n", encoding="utf-8")
+    # backdate mtime by 49 hours to simulate a stale submission
+    past = time.time() - 49 * 3600
+    import os
+    os.utime(submitted_path, (past, past))
+    cfg = ProjectConfig(status=StatusConfig(submission_timeout_hours=48.0))
+
+    assert derive_design_status("idea001", "design001", root=tmp_path, cfg=cfg) == "Submission Stale"
+
+
+def test_status_derivation_marks_training_failed(tmp_path: Path) -> None:
+    init_status_fixture(tmp_path)
+    design = tmp_path / "runs" / "idea001" / "design001"
+    (design / "code_review.md").write_text("APPROVED\n", encoding="utf-8")
+    (design / "job_submitted.txt").write_text("Submitted: idea001-design001\n", encoding="utf-8")
+    (design / "training_failed.txt").write_text("OOM error\n", encoding="utf-8")
+
+    assert derive_design_status("idea001", "design001", root=tmp_path) == "Training Failed"
 
 
 def test_status_derivation_marks_implement_failed(tmp_path: Path) -> None:
@@ -180,7 +208,7 @@ def test_add_idea_cli_registers_idea_and_creates_design_tracker(tmp_path: Path) 
     idea_csv = (tmp_path / "runs" / "idea_overview.csv").read_text(encoding="utf-8")
     design_csv = (tmp_path / "runs" / "idea002" / "design_overview.csv").read_text(encoding="utf-8")
     assert "idea002,Idea Two,Not Designed" in idea_csv
-    assert design_csv == "Design_ID,Design_Description,Status\n"
+    assert "Design_ID,Design_Description,Status" in design_csv
 
 
 def test_sync_status_auto_registers_new_idea_folder(tmp_path: Path) -> None:
@@ -197,7 +225,7 @@ def test_sync_status_auto_registers_new_idea_folder(tmp_path: Path) -> None:
     idea_csv = (tmp_path / "runs" / "idea_overview.csv").read_text(encoding="utf-8")
     design_csv = (tmp_path / "runs" / "idea002" / "design_overview.csv").read_text(encoding="utf-8")
     assert "idea002,Depth-Aware Augmentation,Not Designed" in idea_csv
-    assert design_csv == "Design_ID,Design_Description,Status\n"
+    assert "Design_ID,Design_Description,Status" in design_csv
 
 
 def test_add_design_cli_registers_design_and_creates_directory(tmp_path: Path) -> None:
@@ -302,7 +330,10 @@ def test_review_check_passes_for_valid_idea(tmp_path: Path) -> None:
     idea_dir = tmp_path / "runs" / "idea003"
     idea_dir.mkdir(parents=True)
     (idea_dir / "idea.md").write_text(
-        "**Idea Name:** Temporal Fusion\n**Expected Designs:** 2\n**Baseline Source:** baseline/\n",
+        "**Idea Name:** Temporal Fusion\n"
+        "**Approach:** Apply cross-frame attention to fuse temporal context into pose estimation.\n"
+        "**Expected Designs:** 2\n"
+        "**Baseline Source:** baseline/\n",
         encoding="utf-8",
     )
 
@@ -323,6 +354,7 @@ def test_review_check_fails_for_invalid_idea(tmp_path: Path) -> None:
     result = run_cli(tmp_path, "review-check", "runs/idea003/idea.md")
 
     assert result.returncode != 0
+    assert "Missing required field `**Approach:**`" in result.stdout
     assert "Missing required field `**Baseline Source:**`." in result.stdout
     assert "`**Expected Designs:**` must be a positive integer." in result.stdout
 
@@ -360,6 +392,107 @@ def test_review_check_fails_for_invalid_design(tmp_path: Path) -> None:
     assert "Design should explicitly cover config-level details." in result.stdout
 
 
+def test_review_check_implementation_passes_with_valid_summary(tmp_path: Path) -> None:
+    design_dir = tmp_path / "runs" / "idea001" / "design001"
+    design_dir.mkdir(parents=True)
+    (design_dir / "implementation_summary.md").write_text(
+        "**Files changed:** code/train.py\n\n"
+        "**Changes:** Added layer-wise learning rate decay multiplier to optimizer setup.\n",
+        encoding="utf-8",
+    )
+
+    result = run_cli(tmp_path, "review-check-implementation", "runs/idea001/design001")
+
+    assert result.returncode == 0, result.stderr
+    assert "Implementation review check passed" in result.stdout
+
+
+def test_review_check_implementation_fails_without_summary(tmp_path: Path) -> None:
+    design_dir = tmp_path / "runs" / "idea001" / "design001"
+    design_dir.mkdir(parents=True)
+
+    result = run_cli(tmp_path, "review-check-implementation", "runs/idea001/design001")
+
+    assert result.returncode != 0
+    assert "Missing `implementation_summary.md`" in result.stdout
+
+
+def test_review_check_implementation_fails_with_missing_sections(tmp_path: Path) -> None:
+    design_dir = tmp_path / "runs" / "idea001" / "design001"
+    design_dir.mkdir(parents=True)
+    (design_dir / "implementation_summary.md").write_text(
+        "I changed some stuff.\n",
+        encoding="utf-8",
+    )
+
+    result = run_cli(tmp_path, "review-check-implementation", "runs/idea001/design001")
+
+    assert result.returncode != 0
+    assert "**Files changed:**" in result.stdout
+    assert "**Changes:**" in result.stdout
+
+
+def test_validate_config_passes_with_valid_static_config(tmp_path: Path) -> None:
+    (tmp_path / ".automation.yaml").write_text(
+        '{"results": {"metric_fields": ["val_loss"], "primary_metric": "val_loss"}, "status": {"done_epoch": 10}}',
+        encoding="utf-8",
+    )
+    result = run_cli(tmp_path, "validate-config")
+    assert result.returncode == 0, result.stderr
+    assert "Config validation passed" in result.stdout
+
+
+def test_validate_config_fails_when_primary_metric_not_in_fields(tmp_path: Path) -> None:
+    (tmp_path / ".automation.yaml").write_text(
+        '{"results": {"metric_fields": ["train_loss"], "primary_metric": "val_loss"}}',
+        encoding="utf-8",
+    )
+    result = run_cli(tmp_path, "validate-config")
+    assert result.returncode != 0
+    assert "primary_metric" in result.stdout
+
+
+def test_validate_config_dynamic_check_finds_metrics(tmp_path: Path) -> None:
+    (tmp_path / ".automation.yaml").write_text(
+        '{"results": {"metric_fields": ["val_loss"], "primary_metric": "val_loss", "metrics_glob": "**/metrics.csv"}}',
+        encoding="utf-8",
+    )
+    search_dir = tmp_path / "test_output"
+    search_dir.mkdir()
+    write_csv(search_dir / "metrics.csv", ["epoch", "val_loss"], [["1", "0.5"]])
+
+    result = run_cli(tmp_path, "validate-config", "--search-dir", str(search_dir))
+    assert result.returncode == 0, result.stderr
+    assert "Config validation passed" in result.stdout
+
+
+def test_validate_config_dynamic_check_fails_on_missing_column(tmp_path: Path) -> None:
+    (tmp_path / ".automation.yaml").write_text(
+        '{"results": {"metric_fields": ["val_loss", "val_acc"], "primary_metric": "val_loss", "metrics_glob": "**/metrics.csv"}}',
+        encoding="utf-8",
+    )
+    search_dir = tmp_path / "test_output"
+    search_dir.mkdir()
+    write_csv(search_dir / "metrics.csv", ["epoch", "val_loss"], [["1", "0.5"]])
+
+    result = run_cli(tmp_path, "validate-config", "--search-dir", str(search_dir))
+    assert result.returncode != 0
+    assert "val_acc" in result.stdout
+
+
+def test_validate_config_dynamic_check_fails_when_glob_finds_nothing(tmp_path: Path) -> None:
+    (tmp_path / ".automation.yaml").write_text(
+        '{"results": {"metric_fields": ["val_loss"], "primary_metric": "val_loss", "metrics_glob": "**/metrics.csv"}}',
+        encoding="utf-8",
+    )
+    search_dir = tmp_path / "test_output"
+    search_dir.mkdir()
+
+    result = run_cli(tmp_path, "validate-config", "--search-dir", str(search_dir))
+    assert result.returncode != 0
+    assert "found no files" in result.stdout
+
+
 def test_submit_implemented_dry_run_uses_canonical_train_path(tmp_path: Path) -> None:
     write_csv(
         tmp_path / "runs" / "idea001" / "design_overview.csv",
@@ -377,16 +510,20 @@ def test_submit_implemented_dry_run_uses_canonical_train_path(tmp_path: Path) ->
     assert "design001/code/train.py" in result.stdout
 
 
-def test_submit_test_dry_run_shows_sbatch_command(tmp_path: Path) -> None:
+def test_submit_test_dry_run_shows_command(tmp_path: Path) -> None:
     target = tmp_path / "runs" / "idea001" / "design001"
     (target / "code").mkdir(parents=True)
+    automation_yaml = tmp_path / ".automation.yaml"
+    automation_yaml.write_text(
+        '{"submit": {"submit_test_command_template": "bash {root}/scripts/local/submit_test.sh {target_dir} {test_output}"}}',
+        encoding="utf-8",
+    )
 
     result = run_cli(tmp_path, "submit-test", str(target), "--dry-run")
 
     assert result.returncode == 0, result.stderr
     assert "DRY RUN: would submit test job" in result.stdout
-    assert "slurm_test.sh" in result.stdout
-    assert str(target / "test_output" / "slurm_test_%j.out") in result.stdout
+    assert "submit_test.sh" in result.stdout
 
 
 def test_build_dashboard_renders_expected_content(tmp_path: Path) -> None:

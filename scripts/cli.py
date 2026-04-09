@@ -9,7 +9,7 @@ from pathlib import Path
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from scripts.lib import dashboard, deploy, results, review, status, submit  # noqa: E402
+from scripts.lib import dashboard, deploy, results, review, status, submit, validate  # noqa: E402
 from scripts.lib.layout import repo_root  # noqa: E402
 
 
@@ -34,6 +34,14 @@ def build_parser() -> argparse.ArgumentParser:
     review_parser = subparsers.add_parser("review-check")
     review_parser.add_argument("target", type=Path)
     review_parser.add_argument("--root", type=Path, default=repo_root())
+
+    review_impl_parser = subparsers.add_parser("review-check-implementation")
+    review_impl_parser.add_argument("design_dir", type=Path)
+    review_impl_parser.add_argument("--root", type=Path, default=repo_root())
+
+    validate_parser = subparsers.add_parser("validate-config")
+    validate_parser.add_argument("--search-dir", type=Path, default=None)
+    validate_parser.add_argument("--root", type=Path, default=repo_root())
 
     sync_parser = subparsers.add_parser("sync-status")
     sync_parser.add_argument("--root", type=Path, default=repo_root())
@@ -84,6 +92,10 @@ def main(argv: list[str] | None = None) -> int:
         status.add_design(args.idea_id, args.design_id, args.description, root=args.root)
     elif args.command == "review-check":
         review.review_check(args.target, root=args.root)
+    elif args.command == "review-check-implementation":
+        review.review_check_implementation(args.design_dir, root=args.root)
+    elif args.command == "validate-config":
+        validate.validate_config(root=args.root, search_dir=args.search_dir)
     elif args.command == "sync-status":
         status.sync_all(root=args.root)
     elif args.command == "submit-implemented":

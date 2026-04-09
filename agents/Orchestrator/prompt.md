@@ -64,6 +64,16 @@ You do not need to understand the project itself. You do not need to read code, 
 - What you should expect back:
   A targeted bug fix plus a concise explanation of what changed and what should be retried.
 
+**Handling Training Failures and Stale Submissions:**
+- After submitting jobs, periodically run `python scripts/cli.py sync-status` to pick up completed, failed, or stale training runs.
+- If a design moves to `Training Failed` status (explicit failure signal via `training_failed.txt`):
+  - In the **full autonomous loop**: skip the failed design and continue. Log the failure but do not pause to ask the user.
+  - In **focused / user-directed mode**: report to the user and ask whether to retry or skip.
+- If a design moves to `Submission Stale` status (job was submitted but produced no results within the configured timeout):
+  - In the **full autonomous loop**: skip the stale design and continue. Log it but do not pause.
+  - In **focused / user-directed mode**: report to the user — the job may still be queued, running slowly, or silently dead. Ask whether to wait longer or abandon.
+- Do not spawn Debugger for training failures or stale submissions unless there is evidence of an automation bug (e.g. the submit script itself crashed, or `job_submitted.txt` was never written).
+
 **Rules:**
 1. Do not manually edit tracker statuses.
 2. When handing off work to sub-agents, pass only identifiers (e.g. `idea_id`) or file paths — never summaries or paraphrases of file contents. Agents must read the source files themselves.

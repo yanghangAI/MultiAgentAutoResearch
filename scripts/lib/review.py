@@ -43,6 +43,8 @@ def _check_idea(path: Path) -> list[str]:
         errors.append(f"Idea folder name '{idea_id}' must match idea### (e.g. idea001).")
     if not _parse_bold_field(content, "Idea Name"):
         errors.append("Missing required field `**Idea Name:**`.")
+    if not _parse_bold_field(content, "Approach"):
+        errors.append("Missing required field `**Approach:**` (one sentence describing the core mechanism).")
     expected_designs = _parse_bold_field(content, "Expected Designs")
     if not expected_designs:
         errors.append("Missing required field `**Expected Designs:**`.")
@@ -77,6 +79,32 @@ def _check_design(path: Path) -> list[str]:
     return errors
 
 
+def _check_implementation(design_dir: Path) -> list[str]:
+    errors: list[str] = []
+    summary_path = design_dir / "implementation_summary.md"
+    if not summary_path.exists():
+        errors.append(
+            "Missing `implementation_summary.md`. Builder must write this file listing "
+            "every file changed and what changed."
+        )
+        return errors
+    content = store.read_text(summary_path).strip()
+    if not content:
+        errors.append("`implementation_summary.md` is empty.")
+        return errors
+    if not re.search(r"\*\*Files changed:\*\*", content):
+        errors.append(
+            "`implementation_summary.md` must include a `**Files changed:**` section "
+            "listing every modified file."
+        )
+    if not re.search(r"\*\*Changes:\*\*", content):
+        errors.append(
+            "`implementation_summary.md` must include a `**Changes:**` section "
+            "describing what was changed in each file."
+        )
+    return errors
+
+
 def review_check(target: Path, root: Path | None = None) -> None:
     kind, path = _resolve_target(target, root=root)
     if kind == "idea":
@@ -91,3 +119,16 @@ def review_check(target: Path, root: Path | None = None) -> None:
         raise SystemExit(1)
 
     print(f"{kind.title()} review check passed: {path}")
+
+
+def review_check_implementation(design_dir: Path, root: Path | None = None) -> None:
+    root_path = layout.repo_root(root)
+    resolved = design_dir if design_dir.is_absolute() else (root_path / design_dir)
+    resolved = resolved.resolve()
+    errors = _check_implementation(resolved)
+    if errors:
+        print(f"Implementation review check failed: {resolved}")
+        for error in errors:
+            print(f"- {error}")
+        raise SystemExit(1)
+    print(f"Implementation review check passed: {resolved}")

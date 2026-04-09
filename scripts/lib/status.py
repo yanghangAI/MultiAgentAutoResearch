@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import re
+import time
+from datetime import datetime
 from pathlib import Path
 
 from scripts.lib import layout, results as results_service, store
@@ -8,8 +10,12 @@ from scripts.lib.models import Status
 from scripts.lib.project_config import ProjectConfig, load_project_config
 
 
-IDEA_HEADERS = ["Idea_ID", "Idea_Name", "Status"]
-DESIGN_HEADERS = ["Design_ID", "Design_Description", "Status"]
+IDEA_HEADERS = ["Idea_ID", "Idea_Name", "Status", "created_at", "updated_at"]
+DESIGN_HEADERS = ["Design_ID", "Design_Description", "Status", "created_at", "updated_at"]
+
+
+def _now() -> str:
+    return datetime.now().isoformat(timespec="seconds")
 
 
 def _parse_bold_field(content: str, field_name: str) -> str | None:
@@ -58,7 +64,9 @@ def add_idea(idea_id: str, idea_name: str, status: str = Status.NOT_DESIGNED, ro
         if row.get("Idea_ID") == idea_id:
             print(f"Idea {idea_id} already exists.")
             return
-    store.append_csv_row(csv_path, [idea_id, idea_name, status])
+    now = _now()
+    rows.append({"Idea_ID": idea_id, "Idea_Name": idea_name, "Status": status, "created_at": now, "updated_at": now})
+    store.write_dict_rows(csv_path, IDEA_HEADERS, rows)
     print(f"Added idea {idea_id}.")
 
 
@@ -92,6 +100,7 @@ def update_idea(idea_id: str, status: str, root: Path | None = None) -> None:
         if row.get("Idea_ID") == idea_id:
             if row.get("Status") != status:
                 row["Status"] = status
+                row["updated_at"] = _now()
                 changed = True
             updated = True
     if not updated:
@@ -122,7 +131,9 @@ def add_design(
         if row.get("Design_ID") == design_id:
             print(f"Design {design_id} already exists in {idea_id}.")
             return
-    store.append_csv_row(csv_path, [design_id, description, status])
+    now = _now()
+    rows.append({"Design_ID": design_id, "Design_Description": description, "Status": status, "created_at": now, "updated_at": now})
+    store.write_dict_rows(csv_path, DESIGN_HEADERS, rows)
     print(f"Added design {design_id} to {idea_id}.")
 
 
@@ -167,6 +178,7 @@ def update_design(idea_id: str, design_id: str, status: str, root: Path | None =
         if row.get("Design_ID") == design_id:
             if row.get("Status") != status:
                 row["Status"] = status
+                row["updated_at"] = _now()
                 changed = True
             updated = True
     if not updated:
@@ -267,13 +279,21 @@ def derive_design_status(
         return Status.DONE if epoch >= cfg.status.done_epoch else Status.TRAINING
 
     design_path = layout.design_dir(idea_id, design_id, root)
+
+    if (design_path / "training_failed.txt").exists():
+        return Status.TRAINING_FAILED
+
     implement_failed = store.read_text(design_path / "implement_failed.md")
     if implement_failed.strip():
         return Status.IMPLEMENT_FAILED
 
     code_review = store.read_text(design_path / "code_review.md")
     if cfg.status.approved_token in code_review:
-        if list(design_path.glob("slurm_*.out")):
+        submitted_path = design_path / "job_submitted.txt"
+        if submitted_path.exists():
+            age_hours = (time.time() - submitted_path.stat().st_mtime) / 3600
+            if age_hours > cfg.status.submission_timeout_hours:
+                return Status.SUBMISSION_STALE
             return Status.SUBMITTED
         return Status.IMPLEMENTED
 

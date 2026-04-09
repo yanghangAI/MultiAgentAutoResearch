@@ -40,6 +40,8 @@ Read the target project directory thoroughly:
 - Canonical starting implementation suitable for `baseline/`.
 - File types that should be copied when bootstrapping a new design.
 - How `submit-test` should run as a fast mini-train that still exercises the true training path and generates the same kinds of outputs under `test_output/`.
+- **Infra vs. baseline split:** For each module/file in the project, decide whether it is truly shared (never modified between experiment designs → `infra/`) or training-loop specific (may be modified per design → `baseline/`). If a file is ambiguous — for example, a large utility module that contains both fixed helpers and things experiments might change — decide the split yourself and document the reasoning. If you cannot decide without understanding the user's research intent, ask.
+- **Project cleanliness:** Assess whether the current state of the project is a clean, reproducible starting point. Look for debug flags (`DEBUG=True`, `--debug`, `fast_dev_run`), commented-out experimental code, `TODO`/`FIXME` markers, or WIP model variants. If the project appears to be mid-experiment, flag this to the user and ask which commit or state to treat as the baseline before proceeding.
 
 If anything is genuinely ambiguous after reading, **ask the user** in a single message before proceeding. Examples:
 - "I see two validation metrics — `val_loss` and `val_acc`. Which is the primary metric?"
@@ -50,6 +52,8 @@ If anything is genuinely ambiguous after reading, **ask the user** in a single m
 - "Do you want me to set up the dashboard website and GitHub deployment flow too?"
 - "If yes, should I also set up the GitHub repo/remote configuration needed for deployment?"
 - "Do you want to use a stronger model for the Architect role, such as Opus? This can help because the Architect is responsible for high-level idea generation, and a stronger model may propose more original and better-targeted research directions."
+- "I see `utils.py` contains both data loading helpers (shared) and loss computation (experiment-specific). Should I split it, put it entirely in `infra/`, or entirely in `baseline/`?"
+- "The project has `DEBUG = True` and several commented-out model variants. Should I treat the current state as the baseline, or is there a specific commit or branch I should use?"
 
 Wait for answers, then continue.
 
@@ -151,16 +155,24 @@ If there is no special preference, say that default model choices should be used
 
 These invariants are the baseline contract. Every design must respect them, or results are not comparable.
 
-#### Section 12: Infra Candidates
-List of files/modules from the target project that belong in `infra/` and why. Include the research invariants from Section 11 — any fixed hyperparameter, config value, or constant that must never vary across designs should be defined in `infra/` as importable code, not hardcoded in each design. Also include validation/evaluation functions — the evaluation logic must live in `infra/` so all designs are scored identically, unless it is genuinely inseparable from the model architecture.
+#### Section 12: Baseline State
+State which version of the project is used as the baseline starting point:
+- Is the current working directory state clean and reproducible, or was a specific commit/branch selected?
+- If the project appeared mid-experiment (debug flags, WIP code, commented-out variants), describe what was excluded or cleaned up and why.
+- List any absolute/machine-specific paths found in configs (dataset root, checkpoint dir, pretrained weights) and the `infra/constants.py` constant names chosen to represent them.
 
-#### Section 13: Baseline Candidates
+#### Section 13: Infra Candidates
+List of files/modules from the target project that belong in `infra/` and why. For each file, state the decision: is it shared because it is never modified between designs, or because it defines a research invariant? Include validation/evaluation functions — the evaluation logic must live in `infra/` so all designs are scored identically, unless it is genuinely inseparable from the model architecture.
+
+For any file that was ambiguous (contains both shared and design-specific logic), describe how it was split and which parts went where.
+
+#### Section 14: Baseline Candidates
 List of files from the target project that belong in `baseline/` and why.
 
-#### Section 14: File Bootstrap Pattern
+#### Section 15: File Bootstrap Pattern
 Glob patterns for `setup-design` to copy when creating a new design (e.g. `*.py`).
 
-#### Section 15: Open Questions
+#### Section 16: Open Questions
 Anything still uncertain that sub-agents should flag if they encounter it.
 
 ---
@@ -175,7 +187,7 @@ Present the overview to the user and explicitly ask for approval:
 
 **Do not proceed until the user explicitly approves.** If they request changes, update `docs/project_overview.md` and ask again.
 
-### Step 5 — Update `.automation.yaml` and spawn two sub-agents in parallel
+### Step 5 — Update `.automation.yaml` and spawn two sub-agents in parallel, then a reviewer
 
 Once the user approves the overview, update `.automation.yaml`:
 - `results.metric_fields`, `results.primary_metric`, `results.metrics_glob`
@@ -197,9 +209,23 @@ Updates all agent prompts in `agents/*/prompt.md` to use the target project's vo
 **Sub-agent B — Infra and Baseline Builder** (`setup/Infra_Baseline_Agent.md`)
 Writes, tests, and documents `infra/` and `baseline/`, and updates `scripts/` too if the target project requires automation-layer changes such as submission, metrics parsing, dashboard behavior, or bootstrap logic.
 
-### Step 6 — Validate end-to-end
+**Issue file protocol:** After each sub-agent completes, check whether it wrote an issue file:
+- After Sub-agent A: check `docs/issues_prompt_updater.md`
+- After Sub-agent B: check `docs/issues_infra_builder.md`
+- After Sub-agent C: check `docs/issues_setup_reviewer.md`
 
-After both sub-agents complete, run:
+If an issue file exists, read it, present the questions to the user, and wait for answers. Then delete the issue file, update `docs/project_overview.md` with the answers, and re-spawn the sub-agent. Repeat until the sub-agent completes without writing an issue file.
+
+After both sub-agents report completion without issue files, spawn the reviewer:
+
+**Sub-agent C — Setup Reviewer** (`setup/Setup_Reviewer_Agent.md`)
+Verifies the work produced by both sub-agents against a concrete checklist. Receives only the path to `docs/project_overview.md`. Do not proceed to Step 6 until the Setup Reviewer reports all checks PASS.
+
+If the Setup Reviewer escalates issues back to a sub-agent, re-spawn that sub-agent to fix the specific items, then re-spawn the Setup Reviewer to re-verify. If the Setup Reviewer writes an issue file, follow the same protocol: read it, ask the user, update the overview, re-spawn. Repeat until all checks pass.
+
+### Step 6 — Final checks and cleanup
+
+After the Setup Reviewer reports all checks PASS, run:
 ```bash
 python scripts/cli.py summarize-results
 python scripts/cli.py sync-status
@@ -210,9 +236,12 @@ python scripts/cli.py submit-test --dry-run
 
 If website deployment is enabled and GitHub setup is complete, also validate the deployment path as far as safely possible for the current environment.
 
-Also validate that `submit-test` really runs the true training path in reduced form and produces the expected output artifacts under `test_output/`.
+Then clean up the test design directory left by the Infra Baseline Builder:
+```bash
+rm -rf runs/idea001/
+```
 
-Fix any failures. If a failure is clearly owned by one sub-agent's work, fix it directly rather than re-spawning.
+Fix any remaining failures before proceeding.
 
 ### Step 7 — Handoff summary
 
@@ -239,5 +268,7 @@ Write a concise summary covering:
 1. `docs/project_overview.md` written, reviewed, and approved by the user.
 2. `.automation.yaml` fully configured.
 3. Both sub-agents completed their tasks.
-4. All core CLI commands execute successfully.
-5. Handoff summary written.
+4. Setup Reviewer reports all 11 checks PASS.
+5. All core CLI commands execute successfully.
+6. Test design directory cleaned up.
+7. Handoff summary written.

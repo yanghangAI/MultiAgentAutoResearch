@@ -27,6 +27,8 @@ def _format_shell_template(template: str, **kwargs: str) -> str:
 
 def current_job_count(root: Path | None = None) -> int:
     cfg = load_project_config(root)
+    if not cfg.submit.job_count_command:
+        return 0
     result = subprocess.run(
         ["bash", "-lc", cfg.submit.job_count_command],
         text=True,
@@ -38,6 +40,8 @@ def current_job_count(root: Path | None = None) -> int:
 
 def submit_train_script(train_script: Path, job_name: str, root: Path) -> None:
     cfg = load_project_config(root)
+    if not cfg.submit.submit_train_command_template:
+        raise SystemExit("submit_train_command_template is not configured in .automation.yaml.")
     command = _format_shell_template(
         cfg.submit.submit_train_command_template,
         root=str(root),
@@ -57,6 +61,8 @@ def submit_test(root: Path | None = None, target_dir: Path | None = None, dry_ru
     test_output = target / "test_output"
     test_output.mkdir(parents=True, exist_ok=True)
 
+    if not cfg.submit.submit_test_command_template:
+        raise SystemExit("submit_test_command_template is not configured in .automation.yaml.")
     command = _format_shell_template(
         cfg.submit.submit_test_command_template,
         root=str(root_path),
@@ -100,6 +106,9 @@ def submit_implemented(
                 f"({current_jobs}/{max_jobs} jobs running)..."
             )
             submit_train_script(train_script, job_name, root_path)
+            (design_path / "job_submitted.txt").write_text(
+                f"Submitted: {job_name}\n", encoding="utf-8"
+            )
         submitted.append(job_name)
     if not submitted:
         print("No 'Implemented' designs found waiting for submission.")

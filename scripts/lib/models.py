@@ -10,7 +10,9 @@ class Status:
     IMPLEMENT_FAILED = "Implement Failed"
     IMPLEMENTED = "Implemented"
     SUBMITTED = "Submitted"
+    SUBMISSION_STALE = "Submission Stale"
     TRAINING = "Training"
+    TRAINING_FAILED = "Training Failed"
     DONE = "Done"
 
 
@@ -19,7 +21,9 @@ DESIGN_STATUS_ORDER = (
     Status.IMPLEMENT_FAILED,
     Status.IMPLEMENTED,
     Status.SUBMITTED,
+    Status.SUBMISSION_STALE,
     Status.TRAINING,
+    Status.TRAINING_FAILED,
     Status.DONE,
 )
 

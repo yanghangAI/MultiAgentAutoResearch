@@ -37,19 +37,15 @@ class ResultsConfig:
 class StatusConfig:
     done_epoch: int = 20
     approved_token: str = "APPROVED"
+    submission_timeout_hours: float = 48.0
 
 
 @dataclass(frozen=True)
 class SubmitConfig:
     max_jobs_default: int = 30
-    job_count_command: str = 'squeue -u "$USER" -h | wc -l'
-    submit_train_command_template: str = (
-        "{root}/scripts/slurm/submit_train.sh {train_script} {job_name}"
-    )
-    submit_test_command_template: str = (
-        "sbatch -o {test_output}/slurm_test_%j.out "
-        "{root}/scripts/slurm/slurm_test.sh {target_dir}"
-    )
+    job_count_command: str = ""
+    submit_train_command_template: str = ""
+    submit_test_command_template: str = ""
 
 
 @dataclass(frozen=True)
@@ -157,6 +153,9 @@ def load_project_config(root: Path | None = None) -> ProjectConfig:
             done_epoch=int(status_data.get("done_epoch", StatusConfig.done_epoch)),
             approved_token=str(
                 status_data.get("approved_token", StatusConfig.approved_token)
+            ),
+            submission_timeout_hours=float(
+                status_data.get("submission_timeout_hours", StatusConfig.submission_timeout_hours)
             ),
         ),
         setup_design=SetupDesignConfig(
