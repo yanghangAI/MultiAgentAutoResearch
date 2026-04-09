@@ -12,7 +12,7 @@ You bring a training codebase. The agents handle the rest.
 
 **[AutoSapiens](https://yanghangai.github.io/autosapiens/)** — a live example of this framework applied to human pose estimation research on the [Sapiens](https://github.com/facebookresearch/sapiens) model.
 
-The agents autonomously explored 5 research directions (RGB-D fusion, kinematic attention masking, curriculum loss weighting, layer-wise learning rate decay, depth-aware positional embeddings) across 20+ design variants. The best result — layer-wise learning rate decay — reduced validation MPJPE from 142.5 to ~121, a ~15% improvement over baseline.
+The agents autonomously explored 9 research directions (RGB-D fusion, kinematic attention masking, curriculum loss weighting, layer-wise learning rate decay, depth-aware positional embeddings, ...) across 35+ design variants. The best result reduced validation MPJPE from 142.5 to ~114, a ~20% improvement over baseline.
 
 ---
 
