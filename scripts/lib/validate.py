@@ -21,8 +21,8 @@ def validate_config(root: Path | None = None, search_dir: Path | None = None) ->
             f"primary_metric '{cfg.results.primary_metric}' is not in "
             f"metric_fields {list(cfg.results.metric_fields)}."
         )
-    if cfg.status.done_epoch <= 0:
-        errors.append(f"status.done_epoch must be > 0, got {cfg.status.done_epoch}.")
+    if cfg.status.done_value <= 0:
+        errors.append(f"status.done_value must be > 0, got {cfg.status.done_value}.")
     if not cfg.submit.submit_train_command_template:
         warnings.append("submit.submit_train_command_template is not configured.")
     if not cfg.submit.submit_test_command_template:
@@ -71,6 +71,6 @@ def validate_config(root: Path | None = None, search_dir: Path | None = None) ->
     if errors:
         raise SystemExit(
             f"\nConfig validation failed with {len(errors)} error(s). "
-            "Fix .automation.yaml before starting the research loop."
+            "Fix .automation.json before starting the research loop."
         )
     print("Config validation passed.")

@@ -3,7 +3,7 @@
 # Runs a fast mini-train synchronously and captures output.
 # Copy to scripts/local/submit_test.sh and adapt for your environment.
 #
-# Usage (called via .automation.yaml submit_test_command_template):
+# Usage (called via .automation.json submit_test_command_template):
 #   bash {root}/scripts/local/submit_test.sh {target_dir} {test_output}
 
 set -e
@@ -11,6 +11,10 @@ set -e
 TARGET_DIR=$(realpath "$1")
 TEST_OUTPUT=$(realpath "$2")
 mkdir -p "$TEST_OUTPUT"
+
+# IMPORTANT: Set PYTHONPATH to repo root so `import infra` works
+ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+export PYTHONPATH="$ROOT_DIR:${PYTHONPATH:-}"
 
 # Resolve the training script (prefers code/ subdirectory)
 if [ -f "$TARGET_DIR/code/train.py" ]; then

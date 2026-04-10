@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import csv
+import os
+import tempfile
 from pathlib import Path
 
 
@@ -25,9 +27,18 @@ def read_csv_rows(path: Path) -> list[list[str]]:
 def write_csv_rows(path: Path, rows: list[list[str]]) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.writer(handle)
-        writer.writerows(rows)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", newline="", encoding="utf-8") as handle:
+            writer = csv.writer(handle)
+            writer.writerows(rows)
+        os.rename(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 
 def append_csv_row(path: Path, row: list[str]) -> None:
@@ -49,10 +60,19 @@ def read_dict_rows(path: Path) -> list[dict[str, str]]:
 def write_dict_rows(path: Path, fieldnames: list[str], rows: list[dict[str, str]]) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+        os.rename(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 
 def read_text(path: Path) -> str:

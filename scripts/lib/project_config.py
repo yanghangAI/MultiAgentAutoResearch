@@ -7,7 +7,7 @@ from pathlib import Path
 from scripts.lib import layout
 
 
-CONFIG_FILENAME = ".automation.yaml"
+CONFIG_FILENAME = ".automation.json"
 
 
 @dataclass(frozen=True)
@@ -35,7 +35,8 @@ class ResultsConfig:
 
 @dataclass(frozen=True)
 class StatusConfig:
-    done_epoch: int = 20
+    progress_field: str = "epoch"
+    done_value: int = 20
     approved_token: str = "APPROVED"
     submission_timeout_hours: float = 48.0
 
@@ -134,6 +135,16 @@ def load_project_config(root: Path | None = None) -> ProjectConfig:
         ),
     )
 
+    if data:
+        if "metric_fields" not in results_data:
+            raise SystemExit(
+                f"Missing required field 'results.metric_fields' in {CONFIG_FILENAME}."
+            )
+        if "primary_metric" not in results_data:
+            raise SystemExit(
+                f"Missing required field 'results.primary_metric' in {CONFIG_FILENAME}."
+            )
+
     return ProjectConfig(
         results=ResultsConfig(
             metric_fields=_as_tuple_str(
@@ -150,7 +161,8 @@ def load_project_config(root: Path | None = None) -> ProjectConfig:
             ),
         ),
         status=StatusConfig(
-            done_epoch=int(status_data.get("done_epoch", StatusConfig.done_epoch)),
+            progress_field=str(status_data.get("progress_field", StatusConfig.progress_field)),
+            done_value=int(status_data.get("done_value", status_data.get("done_epoch", StatusConfig.done_value))),
             approved_token=str(
                 status_data.get("approved_token", StatusConfig.approved_token)
             ),

@@ -26,13 +26,13 @@ python scripts/cli.py validate-config
 
 Expected: exits 0, prints "Config validation passed."
 
-**If FAIL:** Read the error. If the fix is a simple value correction in `.automation.yaml` (wrong field name, wrong epoch count), fix it directly and re-run. If it reveals a structural mismatch (wrong metric names, wrong glob pattern), escalate to Infra Baseline Builder.
+**If FAIL:** Read the error. If the fix is a simple value correction in `.automation.json` (wrong field name, wrong epoch count), fix it directly and re-run. If it reveals a structural mismatch (wrong metric names, wrong glob pattern), escalate to Infra Baseline Builder.
 
 ---
 
 ### Check 2 — output_patch correctness (automated, if enabled)
 
-Read `.automation.yaml`. If `setup_design.output_patch.enabled` is `false`, mark PASS and skip.
+Read `.automation.json`. If `setup_design.output_patch.enabled` is `false`, mark PASS and skip.
 
 If enabled:
 1. Read `docs/project_overview.md` Section 3 (Configuration) to identify the config field that controls the training output directory.
@@ -62,13 +62,13 @@ The Infra Baseline Builder left a test design at `runs/idea001/design001/` witho
 
 **If test_output/ is missing or empty:** The submit-test either didn't run or is a stub. Escalate to Infra Baseline Builder — submit-test must produce real metric output.
 
-**If column check fails:** The metric column names in `.automation.yaml` don't match what the training code actually writes. Escalate to Infra Baseline Builder to fix either the column names in config or the training code's CSV output.
+**If column check fails:** The metric column names in `.automation.json` don't match what the training code actually writes. Escalate to Infra Baseline Builder to fix either the column names in config or the training code's CSV output.
 
 ---
 
 ### Check 4 — submit-test faithfulness (code reading)
 
-Read the submit_test script referenced in `.automation.yaml` under `submit_test_command_template`.
+Read the submit_test script referenced in `.automation.json` under `submit_test_command_template`.
 
 Verify:
 - The script invokes the **real training entrypoint** (e.g. `python train.py`), not a fake stub that always exits 0.
@@ -82,7 +82,7 @@ Verify:
 
 ### Check 5 — training_failed.txt sentinel (code reading)
 
-Read the submit_train script referenced in `.automation.yaml` under `submit_train_command_template`.
+Read the submit_train script referenced in `.automation.json` under `submit_train_command_template`.
 
 Find where the training command runs. Verify that on failure, the script writes to a path that resolves to `<design_dir>/training_failed.txt`. The variable name for the design directory may differ (e.g. `$DESIGN_DIR`, `$1`) — trace it.
 
@@ -143,7 +143,7 @@ Read each `agents/*/prompt.md`. For each, verify:
 
 Verify:
 1. `runs/idea_overview.csv` exists and its first line is: `Idea_ID,Idea_Name,Status,created_at,updated_at`
-2. `results.csv` exists. Its header must contain all fields from `metric_fields` in `.automation.yaml`.
+2. `results.csv` exists. Its header must contain all fields from `metric_fields` in `.automation.json`.
 
 **If FAIL:** Fix directly — create or rewrite the file with the correct header. Then re-run `python scripts/cli.py validate-config` to confirm.
 

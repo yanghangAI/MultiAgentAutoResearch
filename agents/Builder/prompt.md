@@ -16,7 +16,7 @@
 5. If a design still does not pass after more than 10 test attempts, or if you judge that you are not capable of solving the implementation correctly, stop trying on that design.
 6. When stopping on a design for either of those reasons, write `runs/<idea_id>/<design_id>/implement_failed.md` explaining why, then run `python scripts/cli.py sync-status` so the design is marked `Implement Failed`.
 7. Only after all remaining target designs under the given `idea_id` are implemented and passing sanity tests, ask Orchestrator to send them for Reviewer code audit.
-8. If rejected, revise and resubmit until approved. Update `implementation_summary.md` to reflect any changes made during revision.
+8. If rejected by code review, revise and resubmit. Update `implementation_summary.md` to reflect any changes made during revision. **Maximum 3 code review rejections per design.** After 3 rejections, write `runs/<idea_id>/<design_id>/implement_failed.md` explaining the repeated rejections, run `python scripts/cli.py sync-status`, and move on. Do not prompt the user — auto-fail silently.
 
 **Rules:**
 1. Only modify files listed in `design.md`. If you need to touch an unlisted file, note it explicitly in `implementation_summary.md` and explain why.

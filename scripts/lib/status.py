@@ -272,11 +272,12 @@ def derive_design_status(
         results_index = load_results_index(root)
     row = results_index.get((idea_id, design_id))
     if row:
+        progress_field = cfg.status.progress_field
         try:
-            epoch = int(float(row.get("epoch", "0")))
+            progress = int(float(row.get(progress_field, "0")))
         except ValueError:
-            epoch = 0
-        return Status.DONE if epoch >= cfg.status.done_epoch else Status.TRAINING
+            progress = 0
+        return Status.DONE if progress >= cfg.status.done_value else Status.TRAINING
 
     design_path = layout.design_dir(idea_id, design_id, root)
 
@@ -351,34 +352,92 @@ def auto_update_status(
 def sync_all(root: Path | None = None) -> None:
     print("Running summarize_results...")
     results_service.summarize_results(root=root)
-    register_missing_ideas(root=root)
-    register_missing_designs(root=root)
-
-    idea_rows = store.read_dict_rows(layout.idea_csv_path(root))
-    if not idea_rows:
-        print("No ideas to sync.")
-        return
 
     cfg = load_project_config(root)
     results_index = load_results_index(root)
-    for idea_row in idea_rows:
-        idea_id = idea_row.get("Idea_ID", "")
-        if not idea_id:
+    runs = layout.runs_dir(root)
+    now = _now()
+
+    # --- Rebuild idea and design CSVs from filesystem ---
+    idea_rows: list[dict[str, str]] = []
+    for idea_path in sorted(runs.glob("idea*")):
+        if not idea_path.is_dir():
             continue
-        if idea_row.get("Status") == Status.DONE:
+        idea_id = idea_path.name
+        if not layout.idea_md_path(idea_id, root).exists():
             continue
-        design_rows = store.read_dict_rows(layout.design_csv_path(idea_id, root))
-        for design_row in design_rows:
-            design_id = design_row.get("Design_ID", "")
-            if not design_id:
+
+        idea_name = infer_idea_name(idea_id, root=root)
+
+        # Rebuild design CSV for this idea
+        design_rows: list[dict[str, str]] = []
+        for design_path in sorted(idea_path.glob("design*")):
+            if not design_path.is_dir():
                 continue
-            if design_row.get("Status") == Status.DONE:
+            design_id = design_path.name
+            if not (design_path / "design.md").exists():
                 continue
-            auto_update_status(
-                idea_id,
-                design_id,
-                root=root,
-                results_index=results_index,
-                cfg=cfg,
+            review = store.read_text(design_path / "design_review.md")
+            if cfg.status.approved_token not in review:
+                continue
+
+            description = infer_design_description(idea_id, design_id, root=root)
+            design_status = derive_design_status(
+                idea_id, design_id, root=root,
+                results_index=results_index, cfg=cfg,
             )
+            design_rows.append({
+                "Design_ID": design_id,
+                "Design_Description": description,
+                "Status": design_status or Status.NOT_IMPLEMENTED,
+                "created_at": now,
+                "updated_at": now,
+            })
+
+        # Write design CSV
+        store.ensure_csv(layout.design_csv_path(idea_id, root), DESIGN_HEADERS)
+        store.write_dict_rows(layout.design_csv_path(idea_id, root), DESIGN_HEADERS, design_rows)
+
+        # Derive idea status from rebuilt design rows
+        idea_status = _derive_idea_status_from_rows(idea_id, design_rows, root=root)
+        idea_rows.append({
+            "Idea_ID": idea_id,
+            "Idea_Name": idea_name,
+            "Status": idea_status or Status.NOT_DESIGNED,
+            "created_at": now,
+            "updated_at": now,
+        })
+
+    # Write idea CSV
+    store.ensure_csv(layout.idea_csv_path(root), IDEA_HEADERS)
+    store.write_dict_rows(layout.idea_csv_path(root), IDEA_HEADERS, idea_rows)
+
+    if not idea_rows:
+        print("No ideas to sync.")
     print("Sync complete.")
+
+
+def _derive_idea_status_from_rows(
+    idea_id: str,
+    design_rows: list[dict[str, str]],
+    root: Path | None = None,
+) -> str | None:
+    if not design_rows:
+        return None
+    current_designs = len(design_rows)
+    expected_designs = get_expected_designs(idea_id, root)
+    has_all_designs = expected_designs is None or current_designs >= expected_designs
+
+    statuses = [row["Status"] for row in design_rows if row.get("Status")]
+    if not has_all_designs:
+        return Status.NOT_DESIGNED
+    if statuses and all(s == Status.DONE for s in statuses):
+        return Status.DONE
+    if statuses and all(s in {Status.TRAINING, Status.DONE} for s in statuses):
+        return Status.TRAINING
+    if statuses and all(
+        s in {Status.IMPLEMENTED, Status.SUBMITTED, Status.TRAINING, Status.DONE}
+        for s in statuses
+    ):
+        return Status.IMPLEMENTED
+    return Status.DESIGNED

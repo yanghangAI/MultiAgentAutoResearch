@@ -1,10 +1,24 @@
 from __future__ import annotations
 
 from html import escape
+from math import isfinite
 from pathlib import Path
 
 from scripts.lib import layout, store
 from scripts.lib.project_config import ProjectConfig, load_project_config
+
+
+def _format_metric(value: object) -> str:
+    raw = str(value).strip() if value else ""
+    if not raw:
+        return "N/A"
+    try:
+        num = float(raw)
+    except (ValueError, TypeError):
+        return "N/A"
+    if not isfinite(num):
+        return "N/A"
+    return f"{num:.2f}"
 
 
 def _is_baseline_result(cfg: ProjectConfig, idea_id: str, design_id: str) -> bool:
@@ -43,6 +57,7 @@ def build_context(root: Path | None = None) -> dict[str, object]:
     metric_fields = cfg.results.metric_fields
     metric_1 = metric_fields[0] if metric_fields else "metric_1"
     metric_2 = metric_fields[1] if len(metric_fields) > 1 else "metric_2"
+    progress_field = cfg.status.progress_field
     ideas = read_csv(layout.idea_csv_path(root_path))
     results = read_csv(layout.results_csv_path(root_path))
 
@@ -54,7 +69,7 @@ def build_context(root: Path | None = None) -> dict[str, object]:
             {
                 "idea_id": idea_id,
                 "design_id": design_id,
-                "epoch": row.get("epoch", ""),
+                "progress": row.get(progress_field, ""),
                 "metric_1_value": row.get(metric_1, "0"),
                 "metric_2_value": row.get(metric_2, "0"),
                 "metric_1_name": metric_1,
@@ -83,6 +98,7 @@ def build_context(root: Path | None = None) -> dict[str, object]:
         "ideas": idea_cards,
         "metric_1_name": metric_1,
         "metric_2_name": metric_2,
+        "progress_field": progress_field,
         "repo_url": cfg.dashboard.github_repo_url,
     }
 
@@ -90,6 +106,7 @@ def build_context(root: Path | None = None) -> dict[str, object]:
 def render_dashboard(context: dict[str, object]) -> str:
     metric_1_name = str(context.get("metric_1_name", "metric_1"))
     metric_2_name = str(context.get("metric_2_name", "metric_2"))
+    progress_label = str(context.get("progress_field", "epoch")).capitalize()
     repo_url = str(context.get("repo_url", ""))
     results_rows = context.get("results", [])
     idea_rows = context.get("ideas", [])
@@ -127,8 +144,11 @@ def render_dashboard(context: dict[str, object]) -> str:
                     <tr>
                         <th onclick="sortTable(0)" style="cursor: pointer;" title="Click to sort">Idea ID ↕</th>
                         <th onclick="sortTable(1)" style="cursor: pointer;" title="Click to sort">Design ID ↕</th>
-                        <th onclick="sortTable(2)" style="cursor: pointer;" title="Click to sort">Epoch ↕</th>
 """
+    html += (
+        f'                        <th onclick="sortTable(2)" style="cursor: pointer;" '
+        f'title="Click to sort">{escape(progress_label)} ↕</th>\n'
+    )
     html += (
         f'                        <th onclick="sortTable(3)" style="cursor: pointer;" '
         f'title="Click to sort">{escape(metric_1_name)} ↕</th>\n'
@@ -143,8 +163,8 @@ def render_dashboard(context: dict[str, object]) -> str:
     for row in results_rows:
         if not isinstance(row, dict):
             continue
-        train_val = row["metric_1_value"] or "0"
-        val_val = row["metric_2_value"] or "0"
+        train_val = _format_metric(row["metric_1_value"])
+        val_val = _format_metric(row["metric_2_value"])
         badge = ' <span class="badge bg-secondary">Baseline</span>' if row["is_baseline"] else ""
         tr_class = " class='table-secondary'" if row["is_baseline"] else ""
         html += (
@@ -153,9 +173,9 @@ def render_dashboard(context: dict[str, object]) -> str:
             f"{escape(str(row['idea_id']))}</a></td>\n"
             f"                        <td><a href=\"{escape(str(row['design_url']))}\" target=\"_blank\">"
             f"{escape(str(row['design_id']))}</a>{badge}</td>\n"
-            f"                        <td>{escape(str(row['epoch']))}</td>\n"
-            f"                        <td>{float(train_val) if train_val else 0:.2f}</td>\n"
-            f"                        <td>{float(val_val) if val_val else 0:.2f}</td>\n"
+            f"                        <td>{escape(str(row['progress']))}</td>\n"
+            f"                        <td>{train_val}</td>\n"
+            f"                        <td>{val_val}</td>\n"
             "                    </tr>\n"
         )
 

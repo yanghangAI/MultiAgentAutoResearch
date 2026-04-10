@@ -98,7 +98,7 @@ For every environment, the submit train script **must** write `training_failed.t
 python "$TRAIN_PY" || (echo "Training failed" > "$DESIGN_DIR/training_failed.txt" && exit 1)
 ```
 
-Then update `.automation.yaml`:
+Then update `.automation.json`:
 - `submit_train_command_template` — point to the new launcher script.
 - `submit_test_command_template` — point to the new test runner script.
 - `job_count_command` — command to count active jobs (e.g. `pgrep -f train.py | wc -l` for local, `squeue -u "$USER" -h | wc -l` for SLURM). Leave empty if not applicable.

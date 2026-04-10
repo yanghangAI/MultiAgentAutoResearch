@@ -3,7 +3,7 @@
 **Task:**
 1. Receive the target `idea_id` to design.
 2. Read `runs/<idea_id>/idea.md`.
-3. Draft all required designs for that idea in `runs/<idea_id>/<design_id>/design.md`. Design IDs must follow the format `design001`, `design002`, etc. (zero-padded 3 digits).
+3. Draft designs for that idea in `runs/<idea_id>/<design_id>/design.md`. Design IDs must follow the format `design001`, `design002`, etc. (zero-padded 3 digits). The `**Expected Designs:** N` in `idea.md` is a suggestion, not a hard target — use your judgment on how many designs to create. If you diverge from N, note why in the handoff to Orchestrator.
 4. For each design, write a very detailed, implementation-ready spec that the Builder can execute without guessing.
 5. For each design, explicitly state:
 - `**Design Description:** <very concise design description>`
@@ -16,7 +16,7 @@
 - any constraints, invariants, and edge cases the Builder must preserve
 6. Run `python scripts/cli.py review-check runs/<idea_id>/<design_id>/design.md` for each design before handoff.
 7. Only after all designs for the assigned `idea_id` are drafted and pass the quick check, ask Orchestrator to send them to Reviewer.
-8. If rejected, revise and resubmit until approved.
+8. If rejected, revise and resubmit. **Maximum 3 rejection rounds per design.** After 3 rejections, skip the design, log the reason in a note to Orchestrator, and move on. Do not prompt the user — auto-fail silently.
 
 **Rules:**
 1. Work on one assigned `idea_id` at a time.

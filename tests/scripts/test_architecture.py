@@ -52,8 +52,14 @@ def init_status_fixture(root: Path) -> None:
         "**Idea Name:** Idea One\n**Expected Designs:** 2\n",
         encoding="utf-8",
     )
-    (root / "runs" / "idea001" / "design001").mkdir(parents=True, exist_ok=True)
-    (root / "runs" / "idea001" / "design002").mkdir(parents=True, exist_ok=True)
+    d1 = root / "runs" / "idea001" / "design001"
+    d1.mkdir(parents=True, exist_ok=True)
+    (d1 / "design.md").write_text("**Design Description:** first\n", encoding="utf-8")
+    (d1 / "design_review.md").write_text("APPROVED\n", encoding="utf-8")
+    d2 = root / "runs" / "idea001" / "design002"
+    d2.mkdir(parents=True, exist_ok=True)
+    (d2 / "design.md").write_text("**Design Description:** second\n", encoding="utf-8")
+    (d2 / "design_review.md").write_text("APPROVED\n", encoding="utf-8")
 
 
 def test_layout_resolve_train_script_prefers_code_dir(tmp_path: Path) -> None:
@@ -432,9 +438,38 @@ def test_review_check_implementation_fails_with_missing_sections(tmp_path: Path)
     assert "**Changes:**" in result.stdout
 
 
+def test_config_loads_from_automation_json(tmp_path: Path) -> None:
+    (tmp_path / ".automation.json").write_text(
+        '{"results": {"metric_fields": ["val_loss"], "primary_metric": "val_loss"}}',
+        encoding="utf-8",
+    )
+    result = run_cli(tmp_path, "validate-config")
+    assert result.returncode == 0, result.stderr
+
+
+def test_config_errors_when_metric_fields_missing(tmp_path: Path) -> None:
+    (tmp_path / ".automation.json").write_text(
+        '{"results": {"primary_metric": "val_loss"}}',
+        encoding="utf-8",
+    )
+    result = run_cli(tmp_path, "validate-config")
+    assert result.returncode != 0
+    assert "metric_fields" in (result.stdout + result.stderr)
+
+
+def test_config_errors_when_primary_metric_missing(tmp_path: Path) -> None:
+    (tmp_path / ".automation.json").write_text(
+        '{"results": {"metric_fields": ["val_loss"]}}',
+        encoding="utf-8",
+    )
+    result = run_cli(tmp_path, "validate-config")
+    assert result.returncode != 0
+    assert "primary_metric" in (result.stdout + result.stderr)
+
+
 def test_validate_config_passes_with_valid_static_config(tmp_path: Path) -> None:
-    (tmp_path / ".automation.yaml").write_text(
-        '{"results": {"metric_fields": ["val_loss"], "primary_metric": "val_loss"}, "status": {"done_epoch": 10}}',
+    (tmp_path / ".automation.json").write_text(
+        '{"results": {"metric_fields": ["val_loss"], "primary_metric": "val_loss"}, "status": {"done_value": 10}}',
         encoding="utf-8",
     )
     result = run_cli(tmp_path, "validate-config")
@@ -443,7 +478,7 @@ def test_validate_config_passes_with_valid_static_config(tmp_path: Path) -> None
 
 
 def test_validate_config_fails_when_primary_metric_not_in_fields(tmp_path: Path) -> None:
-    (tmp_path / ".automation.yaml").write_text(
+    (tmp_path / ".automation.json").write_text(
         '{"results": {"metric_fields": ["train_loss"], "primary_metric": "val_loss"}}',
         encoding="utf-8",
     )
@@ -453,7 +488,7 @@ def test_validate_config_fails_when_primary_metric_not_in_fields(tmp_path: Path)
 
 
 def test_validate_config_dynamic_check_finds_metrics(tmp_path: Path) -> None:
-    (tmp_path / ".automation.yaml").write_text(
+    (tmp_path / ".automation.json").write_text(
         '{"results": {"metric_fields": ["val_loss"], "primary_metric": "val_loss", "metrics_glob": "**/metrics.csv"}}',
         encoding="utf-8",
     )
@@ -467,7 +502,7 @@ def test_validate_config_dynamic_check_finds_metrics(tmp_path: Path) -> None:
 
 
 def test_validate_config_dynamic_check_fails_on_missing_column(tmp_path: Path) -> None:
-    (tmp_path / ".automation.yaml").write_text(
+    (tmp_path / ".automation.json").write_text(
         '{"results": {"metric_fields": ["val_loss", "val_acc"], "primary_metric": "val_loss", "metrics_glob": "**/metrics.csv"}}',
         encoding="utf-8",
     )
@@ -481,7 +516,7 @@ def test_validate_config_dynamic_check_fails_on_missing_column(tmp_path: Path) -
 
 
 def test_validate_config_dynamic_check_fails_when_glob_finds_nothing(tmp_path: Path) -> None:
-    (tmp_path / ".automation.yaml").write_text(
+    (tmp_path / ".automation.json").write_text(
         '{"results": {"metric_fields": ["val_loss"], "primary_metric": "val_loss", "metrics_glob": "**/metrics.csv"}}',
         encoding="utf-8",
     )
@@ -513,9 +548,9 @@ def test_submit_implemented_dry_run_uses_canonical_train_path(tmp_path: Path) ->
 def test_submit_test_dry_run_shows_command(tmp_path: Path) -> None:
     target = tmp_path / "runs" / "idea001" / "design001"
     (target / "code").mkdir(parents=True)
-    automation_yaml = tmp_path / ".automation.yaml"
+    automation_yaml = tmp_path / ".automation.json"
     automation_yaml.write_text(
-        '{"submit": {"submit_test_command_template": "bash {root}/scripts/local/submit_test.sh {target_dir} {test_output}"}}',
+        '{"results": {"metric_fields": ["val_loss"], "primary_metric": "val_loss"}, "submit": {"submit_test_command_template": "bash {root}/scripts/local/submit_test.sh {target_dir} {test_output}"}}',
         encoding="utf-8",
     )
 

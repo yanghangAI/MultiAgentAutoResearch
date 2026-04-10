@@ -61,5 +61,5 @@ class DesignRecord:
 class ResultRecord:
     idea_id: str
     design_id: str
-    epoch: str
+    progress: str
     metrics: dict[str, str]

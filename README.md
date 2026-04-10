@@ -78,7 +78,7 @@ Then tell it to act as the Setup Agent:
 Claude Code will take it from there. The Setup Agent:
 - Reads your training code to understand metrics, config, and runtime environment
 - Asks you clarifying questions if anything is ambiguous
-- Configures `.automation.yaml` for your project
+- Configures `.automation.json` for your project
 - Writes and tests `infra/` (shared utilities) and `baseline/` (starting implementation)
 - Updates all agent prompts with your project's vocabulary and conventions
 - Validates the full pipeline end-to-end before handing off
@@ -147,7 +147,7 @@ python scripts/cli.py build-dashboard     # generates website/index.html
 
 ## Configuration
 
-All behavior is controlled by `.automation.yaml`. The key fields:
+All behavior is controlled by `.automation.json`. The key fields:
 
 ```json
 {
@@ -157,7 +157,8 @@ All behavior is controlled by `.automation.yaml`. The key fields:
     "metrics_glob": "**/metrics.csv"
   },
   "status": {
-    "done_epoch": 100
+    "progress_field": "epoch",
+    "done_value": 100
   },
   "submit": {
     "submit_train_command_template": "bash {root}/scripts/local/submit_train.sh {train_script} {job_name}",
@@ -196,7 +197,7 @@ scripts/
   examples/       Reference submission scripts (slurm/, local/)
 setup/            Agent prompts for initial project setup
 website/          Generated results dashboard
-.automation.yaml  Project configuration
+.automation.json  Project configuration
 ```
 
 Within `runs/`, every experiment follows an **idea → design** lifecycle:
@@ -239,7 +240,7 @@ Not Designed → Designed → Implemented → Training → Done
 ## All CLI Commands
 
 ```bash
-python scripts/cli.py validate-config                 # check .automation.yaml static fields
+python scripts/cli.py validate-config                 # check .automation.json static fields
 python scripts/cli.py validate-config --search-dir <dir> # also verify metrics glob + columns against real output
 python scripts/cli.py add-idea <idea_id> <idea_name> # register a new idea
 python scripts/cli.py add-design <idea_id> <design_id> <description> # register a new design

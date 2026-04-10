@@ -7,7 +7,8 @@ from scripts.lib.project_config import load_project_config
 from scripts.lib.models import ResultRecord
 
 
-CORE_RESULT_FIELDS = ["idea_id", "design_id", "epoch"]
+def _core_result_fields(progress_field: str) -> list[str]:
+    return ["idea_id", "design_id", progress_field]
 
 
 def discover_metrics_files(root: Path | None = None) -> list[Path]:
@@ -19,6 +20,7 @@ def discover_metrics_files(root: Path | None = None) -> list[Path]:
 
 def parse_metrics_file(metrics_path: Path, root: Path | None = None) -> ResultRecord | None:
     cfg = load_project_config(root)
+    progress_field = cfg.status.progress_field
     rows = store.read_dict_rows(metrics_path)
     if not rows:
         return None
@@ -31,13 +33,14 @@ def parse_metrics_file(metrics_path: Path, root: Path | None = None) -> ResultRe
     return ResultRecord(
         idea_id=idea_id,
         design_id=design_id,
-        epoch=last_row.get("epoch", ""),
+        progress=last_row.get(progress_field, ""),
         metrics=metrics,
     )
 
 
 def summarize_results(root: Path | None = None) -> list[ResultRecord]:
     cfg = load_project_config(root)
+    progress_field = cfg.status.progress_field
     records: list[ResultRecord] = []
     for metrics_path in discover_metrics_files(root):
         try:
@@ -49,12 +52,12 @@ def summarize_results(root: Path | None = None) -> list[ResultRecord]:
             records.append(record)
 
     records.sort(key=lambda item: (item.idea_id, item.design_id))
-    result_fields = CORE_RESULT_FIELDS + list(cfg.results.metric_fields)
+    result_fields = _core_result_fields(progress_field) + list(cfg.results.metric_fields)
     out_rows = [
         {
             "idea_id": record.idea_id,
             "design_id": record.design_id,
-            "epoch": record.epoch,
+            progress_field: record.progress,
             **record.metrics,
         }
         for record in records

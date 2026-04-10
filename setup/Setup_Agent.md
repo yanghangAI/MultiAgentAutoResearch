@@ -107,7 +107,7 @@ Also note any requirements this creates for submission, such as:
 For non-SLURM setups, explicitly record:
 - How training jobs should be launched locally (e.g. background shell process, `nohup`, `screen`, etc.)
 - How to count currently running jobs (e.g. `pgrep -f train.py | wc -l`)
-- That the Infra and Baseline Builder must write local launcher scripts under `scripts/local/` and update `.automation.yaml` templates accordingly
+- That the Infra and Baseline Builder must write local launcher scripts under `scripts/local/` and update `.automation.json` templates accordingly
 
 #### Section 8: Website and Deployment Setup
 State explicitly whether the user wants website setup.
@@ -144,7 +144,7 @@ If there is no special preference, say that default model choices should be used
 - `infra/` — shared utilities; only changed if the user explicitly requests it
 - `baseline/` — canonical starting point; never modified by experiment agents
 - `scripts/` — automation core; never modified during experiments
-- `.automation.yaml` — set once at setup; not touched by experiment agents
+- `.automation.json` — set once at setup; not touched by experiment agents
 - Any source files in the original project directory outside this repo
 
 **Research invariants** — the model and training aspects that must stay fixed to keep experiments comparable. Be specific to this project. Examples:
@@ -187,11 +187,11 @@ Present the overview to the user and explicitly ask for approval:
 
 **Do not proceed until the user explicitly approves.** If they request changes, update `docs/project_overview.md` and ask again.
 
-### Step 5 — Update `.automation.yaml` and spawn two sub-agents in parallel, then a reviewer
+### Step 5 — Update `.automation.json` and spawn two sub-agents in parallel, then a reviewer
 
-Once the user approves the overview, update `.automation.yaml`:
+Once the user approves the overview, update `.automation.json`:
 - `results.metric_fields`, `results.primary_metric`, `results.metrics_glob`
-- `status.done_epoch`, `status.approved_token`
+- `status.progress_field`, `status.done_value`, `status.approved_token`
 - `setup_design.source_globs`, `setup_design.destination_subdir`, `setup_design.output_patch`
 - `submit.*_command_template`, `submit.job_count_command`
 - `dashboard.github_repo_url` (if website deployment is enabled and known)
@@ -203,13 +203,23 @@ If website deployment is enabled, set up the required GitHub repo/remote configu
 
 Then spawn both sub-agents at the same time. Each receives the path to `docs/project_overview.md` as its sole briefing.
 
+**Setup checkpoint file:** Maintain `docs/setup_progress.json` to track which sub-agents have completed. Before spawning a sub-agent, check this file — if the sub-agent already completed, skip it. After each sub-agent completes successfully, update the checkpoint. Example structure:
+```json
+{
+  "prompt_updater": "completed",
+  "infra_baseline": "completed",
+  "setup_reviewer": "pending"
+}
+```
+This enables recovery if the setup process is interrupted — re-running the Setup Agent will skip already-completed sub-agents.
+
 **Sub-agent A — Prompt Updater** (`setup/Prompt_Updater_Agent.md`)
 Updates all agent prompts in `agents/*/prompt.md` to use the target project's vocabulary, file paths, metric names, and constraints.
 
 **Sub-agent B — Infra and Baseline Builder** (`setup/Infra_Baseline_Agent.md`)
 Writes, tests, and documents `infra/` and `baseline/`, and updates `scripts/` too if the target project requires automation-layer changes such as submission, metrics parsing, dashboard behavior, or bootstrap logic.
 
-**Issue file protocol:** After each sub-agent completes, check whether it wrote an issue file:
+**Issue file protocol:** After each sub-agent completes, check whether it wrote an issue file. Also delete any resolved issue files before re-spawning a sub-agent, to prevent stale issues from persisting.
 - After Sub-agent A: check `docs/issues_prompt_updater.md`
 - After Sub-agent B: check `docs/issues_infra_builder.md`
 - After Sub-agent C: check `docs/issues_setup_reviewer.md`
@@ -266,7 +276,7 @@ Write a concise summary covering:
 ## Definition of Done
 
 1. `docs/project_overview.md` written, reviewed, and approved by the user.
-2. `.automation.yaml` fully configured.
+2. `.automation.json` fully configured.
 3. Both sub-agents completed their tasks.
 4. Setup Reviewer reports all 11 checks PASS.
 5. All core CLI commands execute successfully.

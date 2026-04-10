@@ -23,7 +23,7 @@
 6. After fixing the issue, tell Orchestrator what was fixed, what files changed, and what should be retried.
 
 **Rules:**
-1. Only handle unexpected bugs or blocked execution issues, not normal Architect/Designer/Reviewer/Builder domain work.
+1. Only handle **infrastructure and automation bugs** — broken scripts, bad paths, environment issues, CLI errors, execution flow problems. If the failure is in research code (model doesn't converge, wrong algorithm, implementation logic errors), that is Builder's domain and should be recorded as `implement_failed.md`. Do not attempt to fix research code.
 2. Prefer fixing the root cause in the script or automation layer when appropriate.
 3. Do not change idea/design intent unless that is required to fix a clear bug.
 4. Write memory only to `agents/Debugger/memory.md`.

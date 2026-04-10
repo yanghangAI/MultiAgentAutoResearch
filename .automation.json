@@ -11,7 +11,8 @@
     ]
   },
   "status": {
-    "done_epoch": 20,
+    "progress_field": "epoch",
+    "done_value": 20,
     "approved_token": "APPROVED"
   },
   "setup_design": {

@@ -1,7 +1,13 @@
 #!/bin/bash
+# Example SLURM test job script.
+# Copy to scripts/slurm/slurm_test.sh and adapt for your environment.
+#
+# TODO: Update SBATCH directives for your cluster (partition, GPU type, memory, time).
+# TODO: Update the conda/module activation commands for your environment.
+# TODO: Update the config override section to match your project's config structure.
+
 #SBATCH --job-name=test_train
-#SBATCH --partition=gpu
-#SBATCH --constraint=1080ti
+#SBATCH --partition=gpu          # TODO: change to your partition
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=11G
@@ -9,40 +15,25 @@
 
 set -u
 
-# The first argument is the design folder (containing code/ subfolder), defaults to current directory
+# The first argument is the design folder (containing code/ subfolder)
 TARGET_DIR=${1:-$PWD}
 ROOT_DIR=$(dirname "$(dirname "$(dirname "$(realpath "$0")")")")
 
 cd "$TARGET_DIR/code" || exit 1
 
-module load conda/latest
-conda activate hang
+# TODO: Activate your environment (conda, virtualenv, module load, etc.)
+# module load conda/latest
+# conda activate your_env_name
 
-echo "[test] Running train.py in $TARGET_DIR with 2 train seqs, 1 val seq, for 2 epochs."
+echo "[test] Running test train in $TARGET_DIR"
 
+# IMPORTANT: Set PYTHONPATH to repo root so `import infra` works
 export PYTHONPATH="$ROOT_DIR:${PYTHONPATH:-}"
 export ROOT_DIR
 
-python - <<'PY'
-import sys
-import os
-
-sys.path.insert(0, os.getcwd())
-# Ensure the root auto/ path is in sys.path to find infra.py
-sys.path.insert(0, os.environ["ROOT_DIR"])
-import config
-import train
-
-# Override config directly on the class
-config._Cfg.epochs = 2
-config._Cfg.max_train_seqs = 2
-config._Cfg.max_val_seqs = 1
-config._Cfg.num_workers = 0  # prevent dataloader multiprocess issues in short runs
-# output goes in the design folder (parent of code/), not inside code/
-config._Cfg.output_dir = os.path.join(os.path.dirname(os.getcwd()), "test_output")
-
-# Execute
-train.main()
-PY
+# TODO: Replace this section with your project's test train invocation.
+# The test should run a minimal version of training (few epochs, small data)
+# and write output to the test_output/ directory.
+python train.py
 
 echo "[test] Finished."

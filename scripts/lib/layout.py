@@ -66,15 +66,9 @@ def resolve_train_script(path: Path) -> Path:
 
 
 def parse_idea_design_from_metrics(metrics_path: Path) -> tuple[str, str]:
-    parts = set(metrics_path.parts)
     match = re.search(r"(idea\d+)[/\\](design\d+)", str(metrics_path))
     if match:
         return match.group(1), match.group(2)
-    if "baseline" in parts:
-        return "baseline", "baseline"
-    if "bs_probe_1080ti" in parts:
-        bs_match = re.search(r"(bs_\d+)", str(metrics_path))
-        return "bs_probe_1080ti", bs_match.group(1) if bs_match else "unknown"
     return "unknown", "unknown"
 
 

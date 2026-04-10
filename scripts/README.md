@@ -2,7 +2,7 @@
 
 This directory contains the automation layer for tracking experiments, summarizing results, submitting jobs, and building or deploying the project dashboard.
 
-Project-specific behavior is configured in the repo-level `.automation.yaml`.
+Project-specific behavior is configured in the repo-level `.automation.json`.
 
 ## Architecture
 
@@ -41,7 +41,7 @@ python scripts/cli.py update-all
 What each command does:
 
 - `summarize-results`
-  Scans `runs/` for `metrics.csv` files using `.automation.yaml` discovery settings and writes a consolidated `results.csv`.
+  Scans `runs/` for `metrics.csv` files using `.automation.json` discovery settings and writes a consolidated `results.csv`.
 - `add-idea <idea_id> <idea_name>`
   Registers a new idea in `runs/idea_overview.csv` and initializes `runs/<idea_id>/design_overview.csv`.
 - `add-design <idea_id> <design_id> <description>`
@@ -51,7 +51,7 @@ What each command does:
 - `sync-status`
   Regenerates `results.csv`, auto-registers any untracked `runs/ideaXXX/idea.md` and `runs/<idea_id>/designXXX/design.md` folders by parsing `**Idea Name:** ...` and `**Design Description:** ...`, and then updates idea and design statuses in the overview CSVs based on metrics, review files, and SLURM outputs.
 - `setup-design <src> <dst>`
-  Copies files from a baseline or prior design into the destination layout according to `.automation.yaml` (`setup_design.source_globs`, destination subdir, optional output patch rule).
+  Copies files from a baseline or prior design into the destination layout according to `.automation.json` (`setup_design.source_globs`, destination subdir, optional output patch rule).
 - `submit-test <design_dir>`
   Submits a fast mini-train job for a design using the configured command template. It should exercise the real training path with reduced sample / reduced iteration settings and write outputs in `<design_dir>/test_output/` by default.
 - `submit-train <train.py> [job_name]`
