@@ -35,7 +35,7 @@ python scripts/cli.py deploy-dashboard
 The automation core is configured through `.automation.json` (JSON-compatible YAML):
 
 - `results`: metric column names and metrics discovery rules
-- `status`: completion epoch and approval marker token
+- `status`: progress field, completion threshold, and approval marker token
 - `setup_design`: source file patterns and optional output path patching
 - `submit`: job-count command and submit command templates
 - `dashboard`: optional GitHub URL and baseline tagging

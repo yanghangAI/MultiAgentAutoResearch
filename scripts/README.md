@@ -78,12 +78,14 @@ python scripts/cli.py update-all --allow-dirty
 
 ## Module Guide
 
+- `lib/context.py`
+  `ProjectContext` dataclass — immutable, per-invocation context created once at CLI entry. Provides lazy-loaded `cfg` and `results_index` shared across all modules.
 - `lib/models.py`
   Shared status constants and lightweight record types.
 - `lib/layout.py`
   Repo path helpers and canonical design/code layout resolution.
 - `lib/store.py`
-  CSV and text file helpers.
+  CSV and text file helpers (atomic writes via temp-file-then-rename).
 - `lib/results.py`
   Metrics discovery and `results.csv` generation (config-driven metric fields).
 - `lib/status.py`
@@ -162,11 +164,18 @@ Submission logic prefers `code/train.py`, but still falls back to a flat `train.
 The script-layer regression tests live in:
 
 ```text
-tests/scripts/test_architecture.py
+tests/scripts/
+  test_architecture.py        # End-to-end CLI and status derivation tests
+  test_atomic_writes.py        # Atomic CSV write safety
+  test_context.py              # ProjectContext creation and caching
+  test_dashboard_robustness.py # Non-numeric metric handling
+  test_progress_unit.py        # Configurable progress field
+  test_regenerative_sync.py    # Regenerative sync-status behavior
+  test_submission_safety.py    # Submission ordering and path parsing
 ```
 
 Run them with:
 
 ```bash
-pytest -q tests/scripts/test_architecture.py
+pytest -q tests/scripts/
 ```
