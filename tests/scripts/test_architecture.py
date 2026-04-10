@@ -12,6 +12,7 @@ if str(REPO_ROOT) not in sys.path:
 from scripts.lib import layout
 import time
 
+from scripts.lib.context import ProjectContext
 from scripts.lib.dashboard import build_dashboard
 from scripts.lib.project_config import ProjectConfig, StatusConfig
 from scripts.lib.results import summarize_results
@@ -96,7 +97,7 @@ def test_summarize_results_ignores_test_output_and_bad_rows(tmp_path: Path) -> N
     bad_dir.mkdir(parents=True)
     write_csv(bad_dir / "metrics.csv", ["epoch", "something_else"], [["2", "x"]])
 
-    records = summarize_results(root=tmp_path)
+    records = summarize_results(ProjectContext.create(tmp_path))
 
     assert len(records) == 1
     output = (tmp_path / "results.csv").read_text(encoding="utf-8")
@@ -116,8 +117,8 @@ def test_status_derivation_from_reviews_and_expected_designs(tmp_path: Path) -> 
     )
 
     assert get_expected_designs("idea001", root=tmp_path) == 2
-    assert derive_design_status("idea001", "design001", root=tmp_path) == "Implemented"
-    assert derive_design_status("idea001", "design002", root=tmp_path) == "Not Implemented"
+    assert derive_design_status("idea001", "design001", ProjectContext.create(tmp_path)) == "Implemented"
+    assert derive_design_status("idea001", "design002", ProjectContext.create(tmp_path)) == "Not Implemented"
     assert derive_idea_status("idea001", root=tmp_path) == "Designed"
 
 
@@ -132,8 +133,8 @@ def test_status_derivation_marks_submitted_and_training(tmp_path: Path) -> None:
         [["idea001", "design002", "3", "10.0", "11.0"]],
     )
 
-    assert derive_design_status("idea001", "design001", root=tmp_path) == "Submitted"
-    assert derive_design_status("idea001", "design002", root=tmp_path) == "Training"
+    assert derive_design_status("idea001", "design001", ProjectContext.create(tmp_path)) == "Submitted"
+    assert derive_design_status("idea001", "design002", ProjectContext.create(tmp_path)) == "Training"
 
 
 def test_status_derivation_marks_submission_stale(tmp_path: Path) -> None:
@@ -148,7 +149,7 @@ def test_status_derivation_marks_submission_stale(tmp_path: Path) -> None:
     os.utime(submitted_path, (past, past))
     cfg = ProjectConfig(status=StatusConfig(submission_timeout_hours=48.0))
 
-    assert derive_design_status("idea001", "design001", root=tmp_path, cfg=cfg) == "Submission Stale"
+    assert derive_design_status("idea001", "design001", ProjectContext.create(tmp_path, cfg=cfg)) == "Submission Stale"
 
 
 def test_status_derivation_marks_training_failed(tmp_path: Path) -> None:
@@ -158,7 +159,7 @@ def test_status_derivation_marks_training_failed(tmp_path: Path) -> None:
     (design / "job_submitted.txt").write_text("Submitted: idea001-design001\n", encoding="utf-8")
     (design / "training_failed.txt").write_text("OOM error\n", encoding="utf-8")
 
-    assert derive_design_status("idea001", "design001", root=tmp_path) == "Training Failed"
+    assert derive_design_status("idea001", "design001", ProjectContext.create(tmp_path)) == "Training Failed"
 
 
 def test_status_derivation_marks_implement_failed(tmp_path: Path) -> None:
@@ -166,7 +167,7 @@ def test_status_derivation_marks_implement_failed(tmp_path: Path) -> None:
     design = tmp_path / "runs" / "idea001" / "design001"
     (design / "implement_failed.md").write_text("Blocked after repeated failures\n", encoding="utf-8")
 
-    assert derive_design_status("idea001", "design001", root=tmp_path) == "Implement Failed"
+    assert derive_design_status("idea001", "design001", ProjectContext.create(tmp_path)) == "Implement Failed"
 
 
 def test_sync_status_cli_updates_csvs(tmp_path: Path) -> None:
@@ -575,7 +576,7 @@ def test_build_dashboard_renders_expected_content(tmp_path: Path) -> None:
     (tmp_path / "runs" / "idea001").mkdir(parents=True, exist_ok=True)
     (tmp_path / "runs" / "idea001" / "idea.md").write_text("Example idea body\n", encoding="utf-8")
 
-    build_dashboard(root=tmp_path)
+    build_dashboard(ProjectContext.create(tmp_path))
 
     html = (tmp_path / "website" / "index.html").read_text(encoding="utf-8")
     assert "Multi-Agent Auto Research" in html

@@ -4,8 +4,12 @@ from html import escape
 from math import isfinite
 from pathlib import Path
 
+from typing import TYPE_CHECKING
+
 from scripts.lib import layout, store
-from scripts.lib.project_config import ProjectConfig, load_project_config
+
+if TYPE_CHECKING:
+    from scripts.lib.context import ProjectContext
 
 
 def _format_metric(value: object) -> str:
@@ -21,7 +25,7 @@ def _format_metric(value: object) -> str:
     return f"{num:.2f}"
 
 
-def _is_baseline_result(cfg: ProjectConfig, idea_id: str, design_id: str) -> bool:
+def _is_baseline_result(cfg: object, idea_id: str, design_id: str) -> bool:
     return (idea_id, design_id) in set(cfg.dashboard.baseline_results)
 
 
@@ -51,9 +55,9 @@ def idea_excerpt(path: Path, limit: int = 200) -> str:
     return escape(excerpt)
 
 
-def build_context(root: Path | None = None) -> dict[str, object]:
-    root_path = layout.repo_root(root)
-    cfg = load_project_config(root_path)
+def build_context(ctx: ProjectContext) -> dict[str, object]:
+    root_path = ctx.root
+    cfg = ctx.cfg
     metric_fields = cfg.results.metric_fields
     metric_1 = metric_fields[0] if metric_fields else "metric_1"
     metric_2 = metric_fields[1] if len(metric_fields) > 1 else "metric_2"
@@ -246,9 +250,9 @@ def render_dashboard(context: dict[str, object]) -> str:
     return html
 
 
-def build_dashboard(root: Path | None = None) -> Path:
-    root_path = layout.repo_root(root)
-    context = build_context(root_path)
+def build_dashboard(ctx: ProjectContext) -> Path:
+    root_path = ctx.root
+    context = build_context(ctx)
     html = render_dashboard(context)
     output_path = layout.website_index_path(root_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)

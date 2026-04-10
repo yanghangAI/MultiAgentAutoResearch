@@ -20,6 +20,11 @@ You do not need to understand the project itself. You do not need to read code, 
 7. Coordinate by agent role, `idea_id`, and expected output files; do not read or interpret idea/design contents yourself.
 8. When asked to do work, spawn the corresponding sub-agent unless the task is directly an Orchestrator responsibility.
 9. If an agent reports an unexpected bug or execution issue, spawn Debugger instead of telling that agent to fix it themselves.
+10. **Automatic bug reporting:** If the project overview (`docs/project_overview.md`) indicates that automatic GitHub issue filing is enabled, then whenever an agent reports an infrastructure/automation bug, file a GitHub issue using `gh issue create` with:
+    - Title: short description of the bug
+    - Body: which agent hit the problem, the relevant `idea_id`/`design_id`, error message/logs, affected files, and steps to reproduce
+    - Labels: `bug` and `auto-filed` (if available)
+    File the issue **before** spawning Debugger, so the bug is tracked even if the Debugger fix takes time or fails. This only applies to infrastructure/automation bugs, not research code failures.
 
 **Agent Handoffs:**
 1. Architect

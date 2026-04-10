@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import csv
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from scripts.lib import layout
-from scripts.lib.project_config import load_project_config
+
+if TYPE_CHECKING:
+    from scripts.lib.context import ProjectContext
 
 
-def validate_config(root: Path | None = None, search_dir: Path | None = None) -> None:
-    root_path = layout.repo_root(root)
-    cfg = load_project_config(root_path)
+def validate_config(ctx: ProjectContext, search_dir: Path | None = None) -> None:
+    cfg = ctx.cfg
     errors: list[str] = []
     warnings: list[str] = []
 
@@ -30,7 +32,7 @@ def validate_config(root: Path | None = None, search_dir: Path | None = None) ->
 
     # --- Dynamic checks ---
     if search_dir is not None:
-        search_path = search_dir if search_dir.is_absolute() else (root_path / search_dir)
+        search_path = search_dir if search_dir.is_absolute() else (ctx.root / search_dir)
         search_path = search_path.resolve()
         if not search_path.exists():
             errors.append(f"--search-dir '{search_path}' does not exist.")
@@ -53,12 +55,12 @@ def validate_config(root: Path | None = None, search_dir: Path | None = None) ->
                     missing_cols = [f for f in cfg.results.metric_fields if f not in headers]
                     if missing_cols:
                         errors.append(
-                            f"{metrics_path.relative_to(root_path)}: missing columns "
+                            f"{metrics_path.relative_to(ctx.root)}: missing columns "
                             f"{missing_cols}. Found columns: {headers}."
                         )
                     else:
                         print(
-                            f"  {metrics_path.relative_to(root_path)}: "
+                            f"  {metrics_path.relative_to(ctx.root)}: "
                             f"all metric columns present. ✓"
                         )
 

@@ -8,6 +8,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from scripts.lib.context import ProjectContext
 from scripts.lib.dashboard import build_dashboard
 
 
@@ -36,7 +37,7 @@ def test_dashboard_renders_na_for_non_numeric_metrics(tmp_path: Path) -> None:
     (tmp_path / "runs" / "idea001").mkdir(parents=True, exist_ok=True)
     (tmp_path / "runs" / "idea001" / "idea.md").write_text("idea body\n", encoding="utf-8")
 
-    build_dashboard(root=tmp_path)
+    build_dashboard(ProjectContext.create(tmp_path))
 
     html = (tmp_path / "website" / "index.html").read_text(encoding="utf-8")
     assert "N/A" in html

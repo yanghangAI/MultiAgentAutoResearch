@@ -5,9 +5,13 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from typing import TYPE_CHECKING
+
 from scripts.lib import layout, results as results_service, store
 from scripts.lib.models import Status
-from scripts.lib.project_config import ProjectConfig, load_project_config
+
+if TYPE_CHECKING:
+    from scripts.lib.context import ProjectContext
 
 
 IDEA_HEADERS = ["Idea_ID", "Idea_Name", "Status", "created_at", "updated_at"]
@@ -70,25 +74,6 @@ def add_idea(idea_id: str, idea_name: str, status: str = Status.NOT_DESIGNED, ro
     print(f"Added idea {idea_id}.")
 
 
-def register_missing_ideas(root: Path | None = None) -> None:
-    csv_path = layout.idea_csv_path(root)
-    store.ensure_csv(csv_path, IDEA_HEADERS)
-    tracked_ids = {
-        row.get("Idea_ID", "")
-        for row in store.read_dict_rows(csv_path)
-        if row.get("Idea_ID")
-    }
-    for idea_dir in sorted(layout.runs_dir(root).glob("idea*")):
-        if not idea_dir.is_dir():
-            continue
-        idea_id = idea_dir.name
-        if idea_id in tracked_ids:
-            continue
-        if not layout.idea_md_path(idea_id, root).exists():
-            continue
-        add_idea(idea_id, infer_idea_name(idea_id, root=root), root=root)
-        tracked_ids.add(idea_id)
-
 
 def update_idea(idea_id: str, status: str, root: Path | None = None) -> None:
     csv_path = layout.idea_csv_path(root)
@@ -136,34 +121,6 @@ def add_design(
     store.write_dict_rows(csv_path, DESIGN_HEADERS, rows)
     print(f"Added design {design_id} to {idea_id}.")
 
-
-def register_missing_designs(root: Path | None = None) -> None:
-    cfg = load_project_config(root)
-    for idea_row in store.read_dict_rows(layout.idea_csv_path(root)):
-        idea_id = idea_row.get("Idea_ID", "")
-        if not idea_id:
-            continue
-        csv_path = layout.design_csv_path(idea_id, root)
-        store.ensure_csv(csv_path, DESIGN_HEADERS)
-        tracked_ids = {
-            row.get("Design_ID", "")
-            for row in store.read_dict_rows(csv_path)
-            if row.get("Design_ID")
-        }
-        idea_dir = layout.idea_dir(idea_id, root)
-        for design_dir in sorted(idea_dir.glob("design*")):
-            if not design_dir.is_dir():
-                continue
-            design_id = design_dir.name
-            if design_id in tracked_ids:
-                continue
-            if not (design_dir / "design.md").exists():
-                continue
-            review = store.read_text(design_dir / "design_review.md")
-            if cfg.status.approved_token not in review:
-                continue
-            add_design(idea_id, design_id, root=root)
-            tracked_ids.add(design_id)
 
 
 def update_design(idea_id: str, design_id: str, status: str, root: Path | None = None) -> None:
@@ -254,23 +211,13 @@ def get_designs_by_status(idea_id: str, status: str, root: Path | None = None) -
     return found
 
 
-def load_results_index(root: Path | None = None) -> dict[tuple[str, str], dict[str, str]]:
-    rows = store.read_dict_rows(layout.results_csv_path(root))
-    return {(row.get("idea_id", ""), row.get("design_id", "")): row for row in rows}
-
-
 def derive_design_status(
     idea_id: str,
     design_id: str,
-    root: Path | None = None,
-    results_index: dict[tuple[str, str], dict[str, str]] | None = None,
-    cfg: ProjectConfig | None = None,
+    ctx: ProjectContext,
 ) -> str | None:
-    if cfg is None:
-        cfg = load_project_config(root)
-    if results_index is None:
-        results_index = load_results_index(root)
-    row = results_index.get((idea_id, design_id))
+    cfg = ctx.cfg
+    row = ctx.results_index.get((idea_id, design_id))
     if row:
         progress_field = cfg.status.progress_field
         try:
@@ -279,7 +226,7 @@ def derive_design_status(
             progress = 0
         return Status.DONE if progress >= cfg.status.done_value else Status.TRAINING
 
-    design_path = layout.design_dir(idea_id, design_id, root)
+    design_path = layout.design_dir(idea_id, design_id, ctx.root)
 
     if (design_path / "training_failed.txt").exists():
         return Status.TRAINING_FAILED
@@ -349,13 +296,16 @@ def auto_update_status(
         update_idea(idea_id, idea_status, root=root)
 
 
-def sync_all(root: Path | None = None) -> None:
+def sync_all(ctx: ProjectContext) -> None:
     print("Running summarize_results...")
-    results_service.summarize_results(root=root)
+    results_service.summarize_results(ctx)
 
-    cfg = load_project_config(root)
-    results_index = load_results_index(root)
-    runs = layout.runs_dir(root)
+    # Create fresh context to pick up newly written results.csv
+    from scripts.lib.context import ProjectContext as _Ctx
+    ctx = _Ctx.create(ctx.root)
+
+    cfg = ctx.cfg
+    runs = layout.runs_dir(ctx.root)
     now = _now()
 
     # --- Rebuild idea and design CSVs from filesystem ---
@@ -364,10 +314,10 @@ def sync_all(root: Path | None = None) -> None:
         if not idea_path.is_dir():
             continue
         idea_id = idea_path.name
-        if not layout.idea_md_path(idea_id, root).exists():
+        if not layout.idea_md_path(idea_id, ctx.root).exists():
             continue
 
-        idea_name = infer_idea_name(idea_id, root=root)
+        idea_name = infer_idea_name(idea_id, root=ctx.root)
 
         # Rebuild design CSV for this idea
         design_rows: list[dict[str, str]] = []
@@ -381,11 +331,8 @@ def sync_all(root: Path | None = None) -> None:
             if cfg.status.approved_token not in review:
                 continue
 
-            description = infer_design_description(idea_id, design_id, root=root)
-            design_status = derive_design_status(
-                idea_id, design_id, root=root,
-                results_index=results_index, cfg=cfg,
-            )
+            description = infer_design_description(idea_id, design_id, root=ctx.root)
+            design_status = derive_design_status(idea_id, design_id, ctx)
             design_rows.append({
                 "Design_ID": design_id,
                 "Design_Description": description,
@@ -395,11 +342,11 @@ def sync_all(root: Path | None = None) -> None:
             })
 
         # Write design CSV
-        store.ensure_csv(layout.design_csv_path(idea_id, root), DESIGN_HEADERS)
-        store.write_dict_rows(layout.design_csv_path(idea_id, root), DESIGN_HEADERS, design_rows)
+        store.ensure_csv(layout.design_csv_path(idea_id, ctx.root), DESIGN_HEADERS)
+        store.write_dict_rows(layout.design_csv_path(idea_id, ctx.root), DESIGN_HEADERS, design_rows)
 
         # Derive idea status from rebuilt design rows
-        idea_status = _derive_idea_status_from_rows(idea_id, design_rows, root=root)
+        idea_status = _derive_idea_status_from_rows(idea_id, design_rows, root=ctx.root)
         idea_rows.append({
             "Idea_ID": idea_id,
             "Idea_Name": idea_name,
@@ -409,8 +356,8 @@ def sync_all(root: Path | None = None) -> None:
         })
 
     # Write idea CSV
-    store.ensure_csv(layout.idea_csv_path(root), IDEA_HEADERS)
-    store.write_dict_rows(layout.idea_csv_path(root), IDEA_HEADERS, idea_rows)
+    store.ensure_csv(layout.idea_csv_path(ctx.root), IDEA_HEADERS)
+    store.write_dict_rows(layout.idea_csv_path(ctx.root), IDEA_HEADERS, idea_rows)
 
     if not idea_rows:
         print("No ideas to sync.")

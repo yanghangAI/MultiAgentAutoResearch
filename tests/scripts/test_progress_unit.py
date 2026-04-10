@@ -8,6 +8,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from scripts.lib.context import ProjectContext
 from scripts.lib.project_config import ProjectConfig, StatusConfig, ResultsConfig
 from scripts.lib.status import derive_design_status
 
@@ -41,7 +42,7 @@ def test_custom_progress_field_marks_done(tmp_path: Path) -> None:
         results=ResultsConfig(metric_fields=("val_loss",), primary_metric="val_loss"),
         status=StatusConfig(progress_field="step", done_value=50000),
     )
-    status = derive_design_status("idea001", "design001", root=tmp_path, cfg=cfg)
+    status = derive_design_status("idea001", "design001", ProjectContext.create(tmp_path, cfg=cfg))
     assert status == "Done"
 
 
@@ -52,7 +53,7 @@ def test_custom_progress_field_marks_training_when_below_threshold(tmp_path: Pat
         results=ResultsConfig(metric_fields=("val_loss",), primary_metric="val_loss"),
         status=StatusConfig(progress_field="step", done_value=50000),
     )
-    status = derive_design_status("idea001", "design001", root=tmp_path, cfg=cfg)
+    status = derive_design_status("idea001", "design001", ProjectContext.create(tmp_path, cfg=cfg))
     assert status == "Training"
 
 
@@ -63,5 +64,5 @@ def test_default_progress_field_is_epoch(tmp_path: Path) -> None:
         results=ResultsConfig(metric_fields=("val_loss",), primary_metric="val_loss"),
         status=StatusConfig(done_value=20),
     )
-    status = derive_design_status("idea001", "design001", root=tmp_path, cfg=cfg)
+    status = derive_design_status("idea001", "design001", ProjectContext.create(tmp_path, cfg=cfg))
     assert status == "Done"

@@ -52,6 +52,7 @@ If anything is genuinely ambiguous after reading, **ask the user** in a single m
 - "Do you want me to set up the dashboard website and GitHub deployment flow too?"
 - "If yes, should I also set up the GitHub repo/remote configuration needed for deployment?"
 - "Do you want to use a stronger model for the Architect role, such as Opus? This can help because the Architect is responsible for high-level idea generation, and a stronger model may propose more original and better-targeted research directions."
+- "Would you like to enable automatic GitHub issue filing when agents encounter bugs? If yes, when an agent hits an unexpected error, the Orchestrator will automatically create a GitHub issue with the error details, affected files, and reproduction steps — so bugs are tracked even during unattended runs."
 - "I see `utils.py` contains both data loading helpers (shared) and loss computation (experiment-specific). Should I split it, put it entirely in `infra/`, or entirely in `baseline/`?"
 - "The project has `DEBUG = True` and several commented-out model variants. Should I treat the current state as the baseline, or is there a specific commit or branch I should use?"
 
@@ -128,7 +129,18 @@ If the user wants a stronger model for Architect, state it explicitly and note w
 
 If there is no special preference, say that default model choices should be used.
 
-#### Section 10: What Changes During Auto Research
+#### Section 10: Automatic Bug Reporting
+Record whether the user wants automatic GitHub issue filing when agents encounter bugs.
+
+If yes:
+- The Orchestrator should use `gh issue create` to file a GitHub issue whenever an agent reports an unexpected bug (broken scripts, CLI errors, environment failures).
+- The issue should include: which agent hit the problem, the relevant `idea_id`/`design_id`, error message/logs, affected files, and steps to reproduce.
+- Issues should be labeled `bug` and `auto-filed` if those labels exist.
+- This only applies to infrastructure/automation bugs, not research code failures (which are recorded as `implement_failed.md`).
+
+If no, say that bugs should be reported manually or handled by the Debugger agent without GitHub issue creation.
+
+#### Section 11: What Changes During Auto Research
 
 **Infrastructure changes** — files and directories the agents will create or modify during the research loop:
 - `runs/` — new idea and design folders, CSV trackers, review files
@@ -138,7 +150,7 @@ If there is no special preference, say that default model choices should be used
 
 **Experimentable files** — which files inside `baseline/` agents are permitted to modify when implementing a design. Be specific (e.g. `train.py`, `model.py`, `config.py`). Do not decide what to explore — that is the Architect's job. Only record which files are in scope for modification versus which must stay fixed.
 
-#### Section 11: What Never Changes
+#### Section 12: What Never Changes
 
 **Infrastructure boundaries** — files and directories that must remain stable throughout the research loop:
 - `infra/` — shared utilities; only changed if the user explicitly requests it
@@ -155,24 +167,24 @@ If there is no special preference, say that default model choices should be used
 
 These invariants are the baseline contract. Every design must respect them, or results are not comparable.
 
-#### Section 12: Baseline State
+#### Section 13: Baseline State
 State which version of the project is used as the baseline starting point:
 - Is the current working directory state clean and reproducible, or was a specific commit/branch selected?
 - If the project appeared mid-experiment (debug flags, WIP code, commented-out variants), describe what was excluded or cleaned up and why.
 - List any absolute/machine-specific paths found in configs (dataset root, checkpoint dir, pretrained weights) and the `infra/constants.py` constant names chosen to represent them.
 
-#### Section 13: Infra Candidates
+#### Section 14: Infra Candidates
 List of files/modules from the target project that belong in `infra/` and why. For each file, state the decision: is it shared because it is never modified between designs, or because it defines a research invariant? Include validation/evaluation functions — the evaluation logic must live in `infra/` so all designs are scored identically, unless it is genuinely inseparable from the model architecture.
 
 For any file that was ambiguous (contains both shared and design-specific logic), describe how it was split and which parts went where.
 
-#### Section 14: Baseline Candidates
+#### Section 15: Baseline Candidates
 List of files from the target project that belong in `baseline/` and why.
 
-#### Section 15: File Bootstrap Pattern
+#### Section 16: File Bootstrap Pattern
 Glob patterns for `setup-design` to copy when creating a new design (e.g. `*.py`).
 
-#### Section 16: Open Questions
+#### Section 17: Open Questions
 Anything still uncertain that sub-agents should flag if they encounter it.
 
 ---

@@ -8,6 +8,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from scripts.lib.context import ProjectContext
 from scripts.lib.layout import parse_idea_design_from_metrics
 from scripts.lib.submit import submit_implemented
 
@@ -54,6 +55,6 @@ def test_job_submitted_written_before_submit_command(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    submitted = submit_implemented(root=tmp_path)
+    submitted = submit_implemented(ProjectContext.create(tmp_path))
     assert "idea001-design001" in submitted
     assert (tmp_path / "runs" / "idea001" / "design001" / "job_submitted.txt").exists()

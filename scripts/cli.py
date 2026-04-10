@@ -10,6 +10,7 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts.lib import dashboard, deploy, results, review, status, submit, validate  # noqa: E402
+from scripts.lib.context import ProjectContext  # noqa: E402
 from scripts.lib.layout import repo_root  # noqa: E402
 
 
@@ -84,50 +85,49 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    ctx = ProjectContext.create(args.root)
+
     if args.command == "summarize-results":
-        results.summarize_results(root=args.root)
+        results.summarize_results(ctx)
     elif args.command == "add-idea":
-        status.add_idea(args.idea_id, args.idea_name, root=args.root)
+        status.add_idea(args.idea_id, args.idea_name, root=ctx.root)
     elif args.command == "add-design":
-        status.add_design(args.idea_id, args.design_id, args.description, root=args.root)
+        status.add_design(args.idea_id, args.design_id, args.description, root=ctx.root)
     elif args.command == "review-check":
-        review.review_check(args.target, root=args.root)
+        review.review_check(args.target, root=ctx.root)
     elif args.command == "review-check-implementation":
-        review.review_check_implementation(args.design_dir, root=args.root)
+        review.review_check_implementation(args.design_dir, root=ctx.root)
     elif args.command == "validate-config":
-        validate.validate_config(root=args.root, search_dir=args.search_dir)
+        validate.validate_config(ctx, search_dir=args.search_dir)
     elif args.command == "sync-status":
-        status.sync_all(root=args.root)
+        status.sync_all(ctx)
     elif args.command == "submit-implemented":
-        submit.submit_implemented(root=args.root, max_jobs=args.max_jobs, dry_run=args.dry_run)
+        submit.submit_implemented(ctx, max_jobs=args.max_jobs, dry_run=args.dry_run)
     elif args.command == "submit-test":
-        submit.submit_test(
-            root=args.root,
-            target_dir=args.target_dir,
-            dry_run=args.dry_run,
-        )
+        submit.submit_test(ctx, target_dir=args.target_dir, dry_run=args.dry_run)
     elif args.command == "submit-train":
         submit.submit_train_script(
-            train_script=(args.root / args.train_py).resolve() if not args.train_py.is_absolute() else args.train_py,
+            train_script=(ctx.root / args.train_py).resolve() if not args.train_py.is_absolute() else args.train_py,
             job_name=args.job_name,
-            root=args.root,
+            ctx=ctx,
         )
     elif args.command == "setup-design":
         from scripts.tools.setup_design import setup_design  # noqa: E402
 
         setup_design(
-            src=(args.root / args.src).resolve() if not args.src.is_absolute() else args.src,
-            dst=(args.root / args.dst).resolve() if not args.dst.is_absolute() else args.dst,
-            root=args.root,
+            src=(ctx.root / args.src).resolve() if not args.src.is_absolute() else args.src,
+            dst=(ctx.root / args.dst).resolve() if not args.dst.is_absolute() else args.dst,
+            root=ctx.root,
         )
     elif args.command == "build-dashboard":
-        dashboard.build_dashboard(root=args.root)
+        dashboard.build_dashboard(ctx)
     elif args.command == "deploy-dashboard":
-        deploy.deploy_dashboard(root=args.root, allow_dirty=args.allow_dirty, push=not args.no_push)
+        deploy.deploy_dashboard(root=ctx.root, allow_dirty=args.allow_dirty, push=not args.no_push)
     elif args.command == "update-all":
-        status.sync_all(root=args.root)
-        dashboard.build_dashboard(root=args.root)
-        deploy.deploy_dashboard(root=args.root, allow_dirty=args.allow_dirty, push=not args.no_push)
+        status.sync_all(ctx)
+        ctx = ProjectContext.create(ctx.root)  # fresh context after sync mutates CSVs
+        dashboard.build_dashboard(ctx)
+        deploy.deploy_dashboard(root=ctx.root, allow_dirty=args.allow_dirty, push=not args.no_push)
     return 0
 
 

@@ -8,6 +8,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from scripts.lib.context import ProjectContext
 from scripts.lib.status import sync_all
 
 
@@ -46,7 +47,7 @@ def test_sync_all_builds_csvs_from_scratch(tmp_path: Path) -> None:
     # No CSVs exist yet
     assert not (tmp_path / "runs" / "idea_overview.csv").exists()
 
-    sync_all(root=tmp_path)
+    sync_all(ProjectContext.create(tmp_path))
 
     idea_csv = (tmp_path / "runs" / "idea_overview.csv").read_text(encoding="utf-8")
     design_csv = (tmp_path / "runs" / "idea001" / "design_overview.csv").read_text(encoding="utf-8")
@@ -62,11 +63,11 @@ def test_sync_all_is_idempotent(tmp_path: Path) -> None:
     """Running sync_all twice produces identical CSV content."""
     setup_idea_with_designs(tmp_path)
 
-    sync_all(root=tmp_path)
+    sync_all(ProjectContext.create(tmp_path))
     idea_csv_1 = (tmp_path / "runs" / "idea_overview.csv").read_text(encoding="utf-8")
     design_csv_1 = (tmp_path / "runs" / "idea001" / "design_overview.csv").read_text(encoding="utf-8")
 
-    sync_all(root=tmp_path)
+    sync_all(ProjectContext.create(tmp_path))
     idea_csv_2 = (tmp_path / "runs" / "idea_overview.csv").read_text(encoding="utf-8")
     design_csv_2 = (tmp_path / "runs" / "idea001" / "design_overview.csv").read_text(encoding="utf-8")
 
@@ -93,7 +94,7 @@ def test_sync_all_discards_stale_csv_rows(tmp_path: Path) -> None:
         ],
     )
 
-    sync_all(root=tmp_path)
+    sync_all(ProjectContext.create(tmp_path))
 
     idea_csv = (tmp_path / "runs" / "idea_overview.csv").read_text(encoding="utf-8")
     assert "idea001" in idea_csv
