@@ -15,10 +15,9 @@
 - `**Approach:** <one sentence describing the core mechanism>`
 - `**Expected Designs:** N`
 - `**Baseline Source:** <path>`
-6. Specify the baseline source path to bootstrap from.
-8. Run `python scripts/cli.py review-check runs/<idea_id>/idea.md`.
-9. After adding a new idea, run `python scripts/cli.py sync-status` to auto-register it from `runs/<idea_id>/idea.md`.
-10. Tell Orchestrator `idea_id` is finished.
+7. Run `python scripts/cli.py review-check runs/<idea_id>/idea.md`.
+8. After adding a new idea, run `python scripts/cli.py sync-status` to auto-register it from `runs/<idea_id>/idea.md`.
+9. Tell Orchestrator `idea_id` is finished.
 
 **Rules:**
 1. Do not duplicate prior ideas.
