@@ -46,12 +46,11 @@ Read the submission scripts in `scripts/local/` (or `scripts/slurm/`) that `setu
 ### Step 4 — End-to-end validation
 
 Run:
-1. `python scripts/cli.py setup-design baseline/ runs/idea001/design001/` — verify it produces a correct copy.
-2. `python scripts/cli.py submit-test runs/idea001/design001/` — verify it exercises the real training path in reduced form and writes expected outputs under `runs/idea001/design001/test_output/`.
+1. `python scripts/cli.py setup-design baseline/ runs/baseline/` — copy the baseline code into the `runs/baseline/` directory.
+2. `python scripts/cli.py submit-test runs/baseline/` — run the reduced-form training test.
+3. **Verify the test passes:** check that the command exits with code 0 and that expected outputs exist under `runs/baseline/test_output/` (e.g. metrics file, no `training_failed.txt`). If the test fails, diagnose and fix the issue, then re-run. **Track your attempt count. If the test still fails after 10 attempts, stop immediately and report back to the Setup Agent** with a summary of all errors encountered and fixes attempted. Do not continue to Step 5.
 
-**Do not clean up `runs/idea001/`** — the Setup Agent needs it for its own sanity check.
-
-Fix all issues before reporting completion.
+**Do not clean up `runs/baseline/`** — the Setup Agent needs it for its own sanity check and it serves as a reference for the validated baseline.
 
 ### Step 5 — Verify infra/ integrity
 

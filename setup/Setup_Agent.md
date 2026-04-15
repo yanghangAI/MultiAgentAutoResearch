@@ -88,47 +88,54 @@ Writes `infra/constants.py` (machine-specific paths, research invariants), updat
 
 Pass each sub-agent the confirmed summary so they have project context. They also read `.automation.json` and the filesystem directly.
 
+**If the Infra_Baseline_Agent reports back with a test failure after 10 attempts:** stop the setup process, present the error summary to the user, and ask for guidance before proceeding. Do not continue to Step 5.
+
 ### Step 5 — Sanity check
 
-After both sub-agents complete, verify the setup yourself:
+After both sub-agents complete successfully, verify the setup yourself:
 
 1. **Config validation:**
    ```bash
    python scripts/cli.py validate-config
    ```
 
-2. **Bootstrap test:**
-   ```bash
-   python scripts/cli.py setup-design baseline/ runs/idea001/design001/
-   ```
+2. **Baseline test verification:**
+   The Infra_Baseline_Agent already ran `setup-design` and `submit-test` into `runs/baseline/`. Verify:
+   - `runs/baseline/test_output/` exists and contains expected metrics output.
+   - No `training_failed.txt` in `runs/baseline/`.
 
-3. **Submit-test (dry run if available, or real):**
-   ```bash
-   python scripts/cli.py submit-test runs/idea001/design001/
-   ```
-   Verify `runs/idea001/design001/test_output/` exists and contains expected metrics output.
-
-4. **Quick code checks:**
+3. **Quick code checks:**
    - No placeholder text in `agents/*/prompt.md` (e.g. `<your metric>`)
    - `baseline/` files don't import from the original project directory
    - `infra/` modules are importable from the repo root
    - Submission scripts write `training_failed.txt` on failure
 
-5. **Cleanup:**
-   ```bash
-   rm -rf runs/idea001/
-   ```
-
 Fix any failures before proceeding.
 
-### Step 6 — Handoff summary
+### Step 6 — Write project summary
 
-Write a concise summary:
+Write a `PROJECT_SUMMARY.md` file at the repo root with:
+- **Project overview:** what the target project does and the research goal.
+- **Baseline:** description of the baseline implementation and its key files.
+- **Metrics:** primary metric, all tracked metrics, and the completion rule (done value).
+- **Runtime:** local or SLURM, and how training is invoked.
+- **Directory layout:** brief description of `baseline/`, `infra/`, `runs/`, `agents/`, `scripts/`.
+- **How to start:** the exact commands to start the research loop (Orchestrator).
+- **Baseline test results:** summary of the `runs/baseline/` test output confirming the pipeline works.
+
+This file serves as a quick-reference for anyone (human or agent) working in the repo.
+
+### Step 7 — Handoff summary
+
+Write a `SETUP_HANDOFF.md` file at the repo root with:
 - Every file changed or created.
 - Configured metrics and completion rule.
 - The exact commands to start the research loop.
 - Any unresolved items.
-- Remind the user to open a new Claude Code session before starting the Orchestrator.
+- A reminder to open a new Claude Code session before starting the Orchestrator.
+- **A recommendation to run a full baseline training first** before starting the research loop. Explain that this establishes ground-truth metrics for comparison, and provide the exact command (e.g. `python scripts/cli.py submit-train runs/baseline/code/train.py baseline`). The research loop's Architect agent needs baseline results to propose meaningful improvements.
+
+Also present a brief summary of the file to the user so they know setup is complete.
 
 ---
 
@@ -147,6 +154,7 @@ Write a concise summary:
 2. `scripts/setup.py` ran successfully.
 3. `.automation.json` fully configured.
 4. Both sub-agents completed their tasks.
-5. All sanity checks pass.
-6. Test design directory cleaned up.
-7. Handoff summary written.
+5. Baseline test in `runs/baseline/` passes (test_output exists, no failures).
+6. All sanity checks pass.
+7. `PROJECT_SUMMARY.md` written at repo root.
+8. Handoff summary written.
