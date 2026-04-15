@@ -23,9 +23,9 @@ def test_parse_idea_design_returns_unknown_for_unrecognized_path() -> None:
     assert parse_idea_design_from_metrics(path) == ("unknown", "unknown")
 
 
-def test_parse_idea_design_no_special_case_for_baseline() -> None:
+def test_parse_idea_design_baseline() -> None:
     path = Path("runs/baseline/metrics.csv")
-    assert parse_idea_design_from_metrics(path) == ("unknown", "unknown")
+    assert parse_idea_design_from_metrics(path) == ("baseline", "baseline")
 
 
 def write_csv(path: Path, headers: list[str], rows: list[list[str]]) -> None:

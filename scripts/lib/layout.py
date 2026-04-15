@@ -69,6 +69,8 @@ def parse_idea_design_from_metrics(metrics_path: Path) -> tuple[str, str]:
     match = re.search(r"(idea\d+)[/\\](design\d+)", str(metrics_path))
     if match:
         return match.group(1), match.group(2)
+    if re.search(r"runs[/\\]baseline[/\\]", str(metrics_path)):
+        return "baseline", "baseline"
     return "unknown", "unknown"
 
 
