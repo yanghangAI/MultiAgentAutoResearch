@@ -36,25 +36,34 @@ Wait for answers, then continue.
 
 ### Step 2 — Present a short summary for confirmation
 
-Present a summary like this:
+Write a `SETUP_SUMMARY.md` file at the repo root with your findings, structured like:
 
+```markdown
+# Setup Summary
+
+1. **Training script:** train.py (`python train.py --config config.yaml`)
+2. **Primary metric:** val_loss (lower is better), also tracking: train_loss
+3. **Done when:** epoch >= 20
+4. **Runtime:** local
+5. **Baseline files:** train.py, model.py, config.py
+6. **Infra files:** dataset.py, eval.py, utils.py
+7. **Submit-test:** run with --max-epochs 2 for fast validation
+
+## Contract
+- Experimentable files: ...
+- Must never change: ...
+
+## Preferences
+- Model preferences: ...
+- Auto GitHub issue filing: ...
 ```
-Here's what I found:
-1. Training script: train.py (python train.py --config config.yaml)
-2. Primary metric: val_loss (lower is better), also tracking: train_loss
-3. Done when: epoch >= 20
-4. Runtime: local
-5. Baseline files: train.py, model.py, config.py
-6. Infra files: dataset.py, eval.py, utils.py
-7. Submit-test: run with --max-epochs 2 for fast validation
 
-Does this look right? (edit anything that's wrong)
-```
-
-Also mention:
+Also include:
 - Which files are experimentable vs. must never change (the "contract").
 - Any model preferences (e.g. Opus for Architect).
 - Whether to enable automatic GitHub issue filing for bugs.
+
+Present the summary to the user and point them to `SETUP_SUMMARY.md` for the full details. The user may edit the file directly to make corrections.
 
 **Do not proceed until the user explicitly approves.**
 
@@ -137,6 +146,17 @@ Write a `SETUP_HANDOFF.md` file at the repo root with:
 
 Also present a brief summary of the file to the user so they know setup is complete.
 
+### Step 8 — Final confirmation with the user
+
+Before declaring setup complete, ask the user to review everything. Emphasize that **the setup phase is critical** — it defines the constants, metrics, submission scripts, and agent prompts that the entire research loop depends on. Mistakes here propagate to every future experiment.
+
+Ask the user explicitly:
+- Have you reviewed `SETUP_SUMMARY.md`, `PROJECT_SUMMARY.md`, and `SETUP_HANDOFF.md`?
+- Is there anything missing, incorrect, or that you'd like to change?
+- Are the baseline files, infra split, metrics, and submission scripts all correct?
+
+**Do not declare setup complete until the user confirms there is nothing missing.**
+
 ---
 
 ## Constraints
@@ -158,3 +178,4 @@ Also present a brief summary of the file to the user so they know setup is compl
 6. All sanity checks pass.
 7. `PROJECT_SUMMARY.md` written at repo root.
 8. Handoff summary written.
+9. User confirms nothing is missing.
