@@ -45,14 +45,33 @@ Each agent has a focused role:
 
 | Agent | What it does |
 |---|---|
-| **Architect** | Reads prior results, proposes new experiment ideas |
-| **Designer** | Writes concrete implementation specs (`design.md`) |
-| **Reviewer** | Approves or rejects designs and implementations |
-| **Builder** | Implements approved designs, runs sanity tests |
+| **Architect** | Reads prior results; either proposes a new research direction or extends an existing one. Always names the starting point (`baseline/` or a specific prior design). |
+| **Designer** | Elaborates one idea into concrete, implementable specs (`design.md`). Inherits the parent from the Architect. |
+| **Reviewer** | The *semantic* auditor — everything mechanical is handled by scripts (see Integrity checks below). For designs: spec completeness, idea non-contradiction, implementation feasibility with cited code evidence. For code: algorithm fidelity and training-signal sanity. Every verdict carries a mandatory "strongest objection" field, and every REJECTED writes a structured entry to the offending agent's memory log. |
+| **Builder** | Implements approved designs inside scope, quotes changed lines in `implementation_summary.md`, runs sanity tests. |
 | **Orchestrator** | Coordinates agents and runs orchestration-only scripts |
 | **Debugger** | Fixes unexpected automation or execution bugs reported by other agents |
 
 Experiment state is tracked in plain CSV files under `runs/`. The CLI keeps everything in sync.
+
+---
+
+## Integrity Checks
+
+Scripts do the structural work — agents only make the judgment calls that can't be mechanized.
+
+**`check-scope`** verifies two invariants on every implemented design:
+
+1. Every file that differs from the design's declared parent must appear in `implementation_summary.md`'s `**Files changed:**` list. Silent modifications fail.
+2. Every file matching `integrity.immutable_paths` (default `infra/**`) must be byte-identical to baseline — no matter how many designs deep in the lineage.
+
+**`verify-claims`** treats fenced code blocks in `implementation_summary.md` as claims. Each block is attributed to a file (by the last path-like token in the 5 lines above it) and confirmed to appear as a substring of that file's current contents (whitespace-normalized). Outright fabrications are rejected before the Reviewer reads anything.
+
+**Parent tracking (`.parent`)** — `setup-design` records the bootstrap source in `runs/<idea>/<design>/.parent`. You can walk any design's lineage with `python scripts/cli.py lineage <design_dir>`. `setup-design` refuses to bootstrap from a design parent that lacks `scope_check.pass`, so undetected changes cannot be laundered through an intermediate design.
+
+**Taint propagation** — if `scope_check.fail` exists on any ancestor, the design is marked `Tainted`, excluded from `results.csv` aggregation, and flagged in the dashboard. The invariant: the only way to compromise results is to modify `infra/`, and modifying `infra/` is mechanically detectable.
+
+**Mistake log** — each agent's `agents/<agent>/memory.md` is a structured append-only log of past errors. Scripts auto-append an entry to `agents/Builder/memory.md` whenever `check-scope` or `verify-claims` fails; the Reviewer appends entries to the Designer's or Builder's memory on any REJECTED verdict. Agents read their own memory at the start of every invocation.
 
 ---
 
@@ -167,9 +186,14 @@ All behavior is controlled by `.automation.json`. The key fields:
   },
   "dashboard": {
     "github_repo_url": "https://github.com/your-org/your-repo"
+  },
+  "integrity": {
+    "immutable_paths": ["infra/**"]
   }
 }
 ```
+
+`integrity.immutable_paths` is a list of globs, relative to a design's `code/` directory, that must remain byte-identical to `baseline/`. Add paths here (e.g. eval loops, split files, metric code) that no design should ever be allowed to change.
 
 The Setup Agent configures these fields for your environment. Reference implementations for Slurm and local runners live in `scripts/examples/`.
 
@@ -206,12 +230,15 @@ Within `runs/`, every experiment follows an **idea → design** lifecycle:
 runs/
   idea_overview.csv              ← all ideas and their status
   idea001/
-    idea.md                      ← what to explore and why
+    idea.md                      ← what to explore and why (includes **Suggested Parent:**)
     design_overview.csv          ← all designs under this idea
     design001/
-      design.md                  ← concrete implementation spec
+      design.md                  ← concrete implementation spec (includes **Parent:**)
+      .parent                    ← absolute path of the bootstrap source (baseline/ or prior design)
       design_review.md           ← Reviewer design decision (APPROVED / REJECTED)
       code_review.md             ← post-implementation code audit
+      implementation_summary.md  ← Builder's change log; cites files and quotes key snippets
+      scope_check.pass/.fail     ← result of check-scope (declared-scope + immutable invariants)
       test_output/               ← outputs from the reduced test-train run
       output/                    ← outputs from the real training run (project-specific)
       code/                      ← actual implementation (bootstrapped by setup-design)
@@ -227,6 +254,7 @@ If you create a new `runs/<idea_id>/designXXX/design.md`, include `**Design Desc
 Not Implemented → Implement Failed
 Not Implemented → Implemented → Submitted → Training → Done
                                          → Training Failed
+(any state)     → Tainted  (scope_check.fail on self or any ancestor)
 ```
 
 **Idea lifecycle** (derived from its designs):
@@ -245,7 +273,10 @@ python scripts/cli.py validate-config --search-dir <dir> # also verify metrics g
 python scripts/cli.py add-idea <idea_id> <idea_name> # register a new idea
 python scripts/cli.py add-design <idea_id> <design_id> <description> # register a new design
 python scripts/cli.py review-check <target> # quick idea/design structure checks
-python scripts/cli.py review-check-implementation <design_dir> # verify implementation_summary.md before code review
+python scripts/cli.py review-check-implementation <design_dir> # structural + check-scope + verify-claims in one step
+python scripts/cli.py check-scope <design_dir> # declared-scope + immutable-path integrity diff
+python scripts/cli.py verify-claims <design_dir> # verify fenced code blocks in implementation_summary.md appear in the files they cite
+python scripts/cli.py lineage <design_dir>     # walk the .parent chain back to baseline
 python scripts/cli.py sync-status              # derive and update all statuses
 python scripts/cli.py summarize-results        # aggregate metrics into results.csv
 python scripts/cli.py setup-design <src> <dst> # bootstrap a new design from a source
