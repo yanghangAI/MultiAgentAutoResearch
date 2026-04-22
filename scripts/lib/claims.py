@@ -23,7 +23,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from scripts.lib import layout, store
+from scripts.lib import layout, memory, store
 from scripts.lib.project_config import load_project_config
 
 
@@ -177,6 +177,35 @@ def verify_claims(design_dir: Path, root: Path | None = None) -> ClaimsReport:
     return report
 
 
+def record_claims_failure(design_dir: Path, report: ClaimsReport, root: Path | None = None) -> None:
+    """Append a structured mistake entry to the Builder's memory file."""
+    if report.passed:
+        return
+    if report.missing:
+        first_file, first_excerpt = report.missing[0]
+        detail = f"claim not in {first_file}: {first_excerpt}"
+    elif report.notes:
+        detail = report.notes[0]
+    else:
+        detail = "verify-claims failed for unknown reason"
+    entry = memory.MistakeEntry(
+        title="verify_claims failed for design " + Path(design_dir).name,
+        what_i_did=f"At design {design_dir}, {detail}",
+        why_wrong=(
+            "Fenced code blocks in implementation_summary.md are verified against "
+            "the actual files they reference. A snippet that doesn't exist in the "
+            "claimed file means the summary misrepresents what was changed."
+        ),
+        how_to_avoid=(
+            "Copy the real changed lines directly from the file into the summary's "
+            "code block, and cite the file path immediately above the block. Run "
+            "`python scripts/cli.py verify-claims <design_dir>` locally first."
+        ),
+        source="verify_claims",
+    )
+    memory.append_mistake("Builder", entry, root=root)
+
+
 def run_verify_claims(design_dir: Path, root: Path | None = None) -> int:
     root_path = layout.repo_root(root)
     design_dir = Path(design_dir)
@@ -186,4 +215,6 @@ def run_verify_claims(design_dir: Path, root: Path | None = None) -> int:
         design_dir = design_dir.resolve()
     report = verify_claims(design_dir, root=root_path)
     print(report.render(), end="")
+    if not report.passed:
+        record_claims_failure(design_dir, report, root=root_path)
     return 0 if report.passed else 1

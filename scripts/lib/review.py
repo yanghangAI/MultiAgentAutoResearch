@@ -144,10 +144,14 @@ def review_check_implementation(design_dir: Path, root: Path | None = None) -> N
     (resolved / (scope.SCOPE_PASS if scope_report.passed else scope.SCOPE_FAIL)).write_text(
         scope_report.render(), encoding="utf-8"
     )
+    if not scope_report.passed:
+        scope.record_scope_failure(resolved, scope_report, root=root_path)
 
     claims_report = claims.verify_claims(resolved, root=root_path)
     print("--- verify-claims ---")
     print(claims_report.render(), end="")
+    if not claims_report.passed:
+        claims.record_claims_failure(resolved, claims_report, root=root_path)
 
     if not scope_report.passed or not claims_report.passed:
         raise SystemExit(1)

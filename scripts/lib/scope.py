@@ -24,7 +24,7 @@ import hashlib
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from scripts.lib import layout, store
+from scripts.lib import layout, memory, store
 from scripts.lib.project_config import load_project_config
 
 
@@ -309,6 +309,40 @@ def check_scope(design_dir: Path, root: Path | None = None) -> ScopeReport:
     return report
 
 
+def record_scope_failure(design_dir: Path, report: ScopeReport, root: Path | None = None) -> None:
+    """Append a structured mistake entry to the Builder's memory file."""
+    if report.passed:
+        return
+    issues: list[str] = []
+    if report.undeclared_changes:
+        issues.append(f"undeclared changes: {', '.join(report.undeclared_changes[:3])}")
+    if report.immutable_violations:
+        issues.append(f"immutable-path violations: {', '.join(report.immutable_violations[:3])}")
+    if report.notes:
+        issues.append(report.notes[0])
+    what_i_did = (
+        f"At design {design_dir}, "
+        + ("; ".join(issues) if issues else "scope check failed for unknown reason")
+    )
+    entry = memory.MistakeEntry(
+        title="scope_check failed for design " + Path(design_dir).name,
+        what_i_did=what_i_did,
+        why_wrong=(
+            "Every code change must be declared in implementation_summary.md's "
+            "**Files changed:** list, and files matching integrity.immutable_paths "
+            "must stay byte-identical to baseline."
+        ),
+        how_to_avoid=(
+            "Before finalizing an implementation, list every modified file in "
+            "implementation_summary.md; never modify files under immutable "
+            "paths (e.g. infra/**). Run `python scripts/cli.py check-scope "
+            "<design_dir>` locally and resolve failures first."
+        ),
+        source="scope_check",
+    )
+    memory.append_mistake("Builder", entry, root=root)
+
+
 def run_check_scope(design_dir: Path, root: Path | None = None) -> int:
     root_path = layout.repo_root(root)
     design_dir = Path(design_dir)
@@ -326,6 +360,8 @@ def run_check_scope(design_dir: Path, root: Path | None = None) -> int:
     (design_dir / SCOPE_FAIL).unlink(missing_ok=True)
     marker = SCOPE_PASS if report.passed else SCOPE_FAIL
     (design_dir / marker).write_text(rendered, encoding="utf-8")
+    if not report.passed:
+        record_scope_failure(design_dir, report, root=root_path)
     return 0 if report.passed else 1
 
 
