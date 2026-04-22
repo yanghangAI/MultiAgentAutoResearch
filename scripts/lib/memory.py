@@ -59,7 +59,15 @@ def append_mistake(agent: str, entry: MistakeEntry, root: Path | None = None) ->
         path.write_text(
             f"# {agent} Memory\n\n"
             f"Structured log of mistakes the {agent} has made, kept so future "
-            f"invocations can skim and avoid repetition.\n",
+            f"invocations can skim and avoid repetition.\n\n"
+            "**Entry format (append new entries at the bottom):**\n\n"
+            "```\n"
+            "## <YYYY-MM-DD> — <one-line title>\n"
+            "**What I did:** ...\n"
+            "**Why it was wrong:** ...\n"
+            "**How to avoid:** ...\n"
+            "**Source:** <who caught it — Reviewer / scope_check / verify_claims / user>\n"
+            "```\n",
             encoding="utf-8",
         )
     with path.open("a", encoding="utf-8") as handle:
