@@ -36,5 +36,10 @@
   "dashboard": {
     "github_repo_url": "",
     "baseline_results": []
+  },
+  "integrity": {
+    "immutable_paths": [
+      "infra/**"
+    ]
   }
 }

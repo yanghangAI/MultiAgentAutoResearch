@@ -24,7 +24,7 @@ from pathlib import Path
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from scripts.lib import store  # noqa: E402
+from scripts.lib import scope, store  # noqa: E402
 from scripts.lib.layout import design_csv_path, parse_design_ref, resolve_code_dir  # noqa: E402
 from scripts.lib.models import ALLOWED_BOOTSTRAP_SOURCE_STATUSES  # noqa: E402
 from scripts.lib.project_config import load_project_config  # noqa: E402
@@ -58,6 +58,22 @@ def _validate_source_status(src: Path, repo_root: Path) -> None:
         )
 
 
+def _validate_source_scope_pass(src: Path) -> None:
+    """Design-to-design bootstrapping requires the source to have passed check-scope.
+
+    Baseline is exempt. This prevents laundering undetected modifications through
+    intermediate designs.
+    """
+    if parse_design_ref(src) is None:
+        return  # baseline or non-design source
+    if not scope.has_scope_pass(src):
+        raise SystemExit(
+            f"Error: source design has no {scope.SCOPE_PASS} marker: {src}\n"
+            f"Run `python scripts/cli.py check-scope {src}` first, resolve any "
+            f"failures, then retry."
+        )
+
+
 def setup_design(src: Path, dst: Path, root: Path | None = None) -> None:
     src = Path(src).resolve()
     dst = Path(dst).resolve()
@@ -69,6 +85,7 @@ def setup_design(src: Path, dst: Path, root: Path | None = None) -> None:
         raise SystemExit(f"Error: source folder not found: {src}")
 
     _validate_source_status(src, repo_root)
+    _validate_source_scope_pass(src)
 
     # Source must have a code/ subfolder (unless it's the baseline, which is flat)
     src_code = resolve_code_dir(src)
@@ -92,6 +109,8 @@ def setup_design(src: Path, dst: Path, root: Path | None = None) -> None:
             f"{list(cfg.setup_design.source_globs)}"
         )
 
+    scope.write_parent(dst, src)
+    print(f"Recorded parent: {dst / scope.PARENT_FILENAME} → {src}")
     print(f"Copied {len(copied)} file(s) from {src_code} → {code_dir}:")
     for name in copied:
         print(f"  {name}")

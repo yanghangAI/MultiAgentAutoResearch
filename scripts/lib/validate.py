@@ -29,6 +29,11 @@ def validate_config(ctx: ProjectContext, search_dir: Path | None = None) -> None
         warnings.append("submit.submit_train_command_template is not configured.")
     if not cfg.submit.submit_test_command_template:
         warnings.append("submit.submit_test_command_template is not configured.")
+    if not cfg.integrity.immutable_paths:
+        warnings.append(
+            "integrity.immutable_paths is empty — no files are protected from "
+            "silent modification across designs."
+        )
 
     # --- Dynamic checks ---
     if search_dir is not None:

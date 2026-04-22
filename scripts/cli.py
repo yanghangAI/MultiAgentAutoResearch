@@ -9,7 +9,7 @@ from pathlib import Path
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from scripts.lib import dashboard, deploy, results, review, status, submit, validate  # noqa: E402
+from scripts.lib import dashboard, deploy, results, review, scope, status, submit, validate  # noqa: E402
 from scripts.lib.context import ProjectContext  # noqa: E402
 from scripts.lib.layout import repo_root  # noqa: E402
 
@@ -62,6 +62,14 @@ def build_parser() -> argparse.ArgumentParser:
     submit_train_parser.add_argument("job_name", nargs="?", default="train_job")
     submit_train_parser.add_argument("--root", type=Path, default=repo_root())
 
+    check_scope_parser = subparsers.add_parser("check-scope")
+    check_scope_parser.add_argument("design_dir", type=Path)
+    check_scope_parser.add_argument("--root", type=Path, default=repo_root())
+
+    lineage_parser = subparsers.add_parser("lineage")
+    lineage_parser.add_argument("design_dir", type=Path)
+    lineage_parser.add_argument("--root", type=Path, default=repo_root())
+
     setup_design_parser = subparsers.add_parser("setup-design")
     setup_design_parser.add_argument("src", type=Path)
     setup_design_parser.add_argument("dst", type=Path)
@@ -111,6 +119,12 @@ def main(argv: list[str] | None = None) -> int:
             job_name=args.job_name,
             ctx=ctx,
         )
+    elif args.command == "check-scope":
+        rc = scope.run_check_scope(args.design_dir, root=ctx.root)
+        if rc != 0:
+            raise SystemExit(rc)
+    elif args.command == "lineage":
+        scope.run_lineage(args.design_dir, root=ctx.root)
     elif args.command == "setup-design":
         from scripts.tools.setup_design import setup_design  # noqa: E402
 

@@ -56,12 +56,18 @@ class DashboardConfig:
 
 
 @dataclass(frozen=True)
+class IntegrityConfig:
+    immutable_paths: tuple[str, ...] = ("infra/**",)
+
+
+@dataclass(frozen=True)
 class ProjectConfig:
     results: ResultsConfig = ResultsConfig()
     status: StatusConfig = StatusConfig()
     setup_design: SetupDesignConfig = SetupDesignConfig()
     submit: SubmitConfig = SubmitConfig()
     dashboard: DashboardConfig = DashboardConfig()
+    integrity: IntegrityConfig = IntegrityConfig()
 
 
 def _as_tuple_str(values: object, fallback: tuple[str, ...]) -> tuple[str, ...]:
@@ -107,6 +113,7 @@ def load_project_config(root: Path | None = None) -> ProjectConfig:
     setup_data = data.get("setup_design", {})
     submit_data = data.get("submit", {})
     dashboard_data = data.get("dashboard", {})
+    integrity_data = data.get("integrity", {})
 
     if not isinstance(results_data, dict):
         results_data = {}
@@ -118,6 +125,8 @@ def load_project_config(root: Path | None = None) -> ProjectConfig:
         submit_data = {}
     if not isinstance(dashboard_data, dict):
         dashboard_data = {}
+    if not isinstance(integrity_data, dict):
+        integrity_data = {}
 
     output_patch_data = setup_data.get("output_patch", {})
     if not isinstance(output_patch_data, dict):
@@ -206,6 +215,12 @@ def load_project_config(root: Path | None = None) -> ProjectConfig:
             ),
             baseline_results=_parse_baseline_results(
                 dashboard_data.get("baseline_results")
+            ),
+        ),
+        integrity=IntegrityConfig(
+            immutable_paths=_as_tuple_str(
+                integrity_data.get("immutable_paths"),
+                IntegrityConfig.immutable_paths,
             ),
         ),
     )
