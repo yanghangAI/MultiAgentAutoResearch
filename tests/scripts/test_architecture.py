@@ -400,8 +400,16 @@ def test_review_check_fails_for_invalid_design(tmp_path: Path) -> None:
 
 
 def test_review_check_implementation_passes_with_valid_summary(tmp_path: Path) -> None:
+    # Scaffold a minimal valid design: baseline + code dir + .parent pointing to baseline.
+    baseline = tmp_path / "baseline"
+    baseline.mkdir()
+    (baseline / "train.py").write_text("x = 1\n", encoding="utf-8")
+
     design_dir = tmp_path / "runs" / "idea001" / "design001"
-    design_dir.mkdir(parents=True)
+    code_dir = design_dir / "code"
+    code_dir.mkdir(parents=True)
+    (code_dir / "train.py").write_text("x = 2\n", encoding="utf-8")  # changed
+    (design_dir / ".parent").write_text(str(baseline.resolve()) + "\n", encoding="utf-8")
     (design_dir / "implementation_summary.md").write_text(
         "**Files changed:** code/train.py\n\n"
         "**Changes:** Added layer-wise learning rate decay multiplier to optimizer setup.\n",
@@ -410,7 +418,7 @@ def test_review_check_implementation_passes_with_valid_summary(tmp_path: Path) -
 
     result = run_cli(tmp_path, "review-check-implementation", "runs/idea001/design001")
 
-    assert result.returncode == 0, result.stderr
+    assert result.returncode == 0, result.stdout + result.stderr
     assert "Implementation review check passed" in result.stdout
 
 

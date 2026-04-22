@@ -9,7 +9,7 @@ from pathlib import Path
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from scripts.lib import dashboard, deploy, results, review, scope, status, submit, validate  # noqa: E402
+from scripts.lib import claims, dashboard, deploy, results, review, scope, status, submit, validate  # noqa: E402
 from scripts.lib.context import ProjectContext  # noqa: E402
 from scripts.lib.layout import repo_root  # noqa: E402
 
@@ -66,6 +66,10 @@ def build_parser() -> argparse.ArgumentParser:
     check_scope_parser.add_argument("design_dir", type=Path)
     check_scope_parser.add_argument("--root", type=Path, default=repo_root())
 
+    verify_claims_parser = subparsers.add_parser("verify-claims")
+    verify_claims_parser.add_argument("design_dir", type=Path)
+    verify_claims_parser.add_argument("--root", type=Path, default=repo_root())
+
     lineage_parser = subparsers.add_parser("lineage")
     lineage_parser.add_argument("design_dir", type=Path)
     lineage_parser.add_argument("--root", type=Path, default=repo_root())
@@ -121,6 +125,10 @@ def main(argv: list[str] | None = None) -> int:
         )
     elif args.command == "check-scope":
         rc = scope.run_check_scope(args.design_dir, root=ctx.root)
+        if rc != 0:
+            raise SystemExit(rc)
+    elif args.command == "verify-claims":
+        rc = claims.run_verify_claims(args.design_dir, root=ctx.root)
         if rc != 0:
             raise SystemExit(rc)
     elif args.command == "lineage":

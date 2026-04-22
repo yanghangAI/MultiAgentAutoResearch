@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from scripts.lib import layout, store
+from scripts.lib import claims, layout, scope, store
 
 
 def _parse_bold_field(content: str, field_name: str) -> str | None:
@@ -130,5 +130,25 @@ def review_check_implementation(design_dir: Path, root: Path | None = None) -> N
         print(f"Implementation review check failed: {resolved}")
         for error in errors:
             print(f"- {error}")
+        raise SystemExit(1)
+    print(f"Structural check passed: {resolved}")
+
+    # Run scope and claims checks; collect failures before exiting so the
+    # reviewer sees everything at once.
+    scope_report = scope.check_scope(resolved, root=root_path)
+    print("--- check-scope ---")
+    print(scope_report.render(), end="")
+    # Persist the scope marker (mirror of `scripts/cli.py check-scope`).
+    (resolved / scope.SCOPE_PASS).unlink(missing_ok=True)
+    (resolved / scope.SCOPE_FAIL).unlink(missing_ok=True)
+    (resolved / (scope.SCOPE_PASS if scope_report.passed else scope.SCOPE_FAIL)).write_text(
+        scope_report.render(), encoding="utf-8"
+    )
+
+    claims_report = claims.verify_claims(resolved, root=root_path)
+    print("--- verify-claims ---")
+    print(claims_report.render(), end="")
+
+    if not scope_report.passed or not claims_report.passed:
         raise SystemExit(1)
     print(f"Implementation review check passed: {resolved}")
