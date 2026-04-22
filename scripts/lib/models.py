@@ -14,6 +14,7 @@ class Status:
     TRAINING = "Training"
     TRAINING_FAILED = "Training Failed"
     DONE = "Done"
+    TAINTED = "Tainted"
 
 
 DESIGN_STATUS_ORDER = (

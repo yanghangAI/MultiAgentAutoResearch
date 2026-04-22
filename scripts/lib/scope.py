@@ -79,6 +79,35 @@ def has_scope_pass(design_dir: Path) -> bool:
     return (design_dir / SCOPE_PASS).exists()
 
 
+def has_scope_fail(design_dir: Path) -> bool:
+    return (design_dir / SCOPE_FAIL).exists()
+
+
+def is_tainted(design_dir: Path, root: Path | None = None) -> bool:
+    """True if this design, or any ancestor via `.parent`, has scope_check.fail.
+
+    An ancestor without any scope marker at all is treated as unknown, not
+    tainted — it's the job of setup-design to refuse unchecked parents, so
+    unmarked links in the chain either mean the design predates PR 1 or is
+    baseline itself. Cycles are defensively terminated.
+    """
+    root_path = layout.repo_root(root)
+    current = Path(design_dir).resolve()
+    visited: set[Path] = set()
+    while True:
+        if current in visited:
+            return False
+        visited.add(current)
+        if has_scope_fail(current):
+            return True
+        if _is_baseline(current, root_path):
+            return False
+        parent_raw = read_parent(current)
+        if parent_raw is None:
+            return False
+        current = parent_raw.resolve()
+
+
 def _baseline_dir(root: Path) -> Path:
     return (root / "baseline").resolve()
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from scripts.lib import layout, store
+from scripts.lib import layout, scope as scope_mod, store
 from scripts.lib.models import ResultRecord
 
 if TYPE_CHECKING:
@@ -42,14 +42,23 @@ def parse_metrics_file(metrics_path: Path, ctx: ProjectContext) -> ResultRecord 
 def summarize_results(ctx: ProjectContext) -> list[ResultRecord]:
     progress_field = ctx.cfg.status.progress_field
     records: list[ResultRecord] = []
+    skipped_tainted = 0
     for metrics_path in discover_metrics_files(ctx):
         try:
             record = parse_metrics_file(metrics_path, ctx)
         except Exception as exc:
             print(f"Error reading {metrics_path}: {exc}")
             continue
-        if record is not None:
-            records.append(record)
+        if record is None:
+            continue
+        if record.idea_id.startswith("idea") and record.design_id.startswith("design"):
+            design_path = layout.design_dir(record.idea_id, record.design_id, ctx.root)
+            if scope_mod.is_tainted(design_path, root=ctx.root):
+                skipped_tainted += 1
+                continue
+        records.append(record)
+    if skipped_tainted:
+        print(f"Skipped {skipped_tainted} tainted design(s) from results aggregation.")
 
     records.sort(key=lambda item: (item.idea_id, item.design_id))
     result_fields = _core_result_fields(progress_field) + list(ctx.cfg.results.metric_fields)

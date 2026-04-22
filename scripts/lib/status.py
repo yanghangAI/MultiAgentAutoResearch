@@ -7,7 +7,7 @@ from pathlib import Path
 
 from typing import TYPE_CHECKING
 
-from scripts.lib import layout, results as results_service, store
+from scripts.lib import layout, results as results_service, scope as scope_mod, store
 from scripts.lib.models import Status
 
 if TYPE_CHECKING:
@@ -217,6 +217,11 @@ def derive_design_status(
     ctx: ProjectContext,
 ) -> str | None:
     cfg = ctx.cfg
+    design_path = layout.design_dir(idea_id, design_id, ctx.root)
+    # Taint takes priority over every other status — a compromised design's
+    # results are untrusted regardless of how far it progressed.
+    if scope_mod.is_tainted(design_path, root=ctx.root):
+        return Status.TAINTED
     row = ctx.results_index.get((idea_id, design_id))
     if row:
         progress_field = cfg.status.progress_field
@@ -225,8 +230,6 @@ def derive_design_status(
         except ValueError:
             progress = 0
         return Status.DONE if progress >= cfg.status.done_value else Status.TRAINING
-
-    design_path = layout.design_dir(idea_id, design_id, ctx.root)
 
     if (design_path / "training_failed.txt").exists():
         return Status.TRAINING_FAILED
