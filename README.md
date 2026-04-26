@@ -6,6 +6,8 @@ You bring a training codebase. The agents handle the rest.
 
 > Beta: this project is still actively updated and improved. If you run into questions, bugs, or confusing behavior, please open a GitHub issue.
 
+![Overview](overview.png)
+
 ---
 
 ## Demo
