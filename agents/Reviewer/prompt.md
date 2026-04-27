@@ -34,11 +34,12 @@
 
 ---
 
-**Code Review — your three jobs:**
+**Code Review — your four jobs:**
 
 1. **Run the automated gate first:** `python scripts/cli.py review-check-implementation runs/<idea_id>/<design_id>` performs the structural check, `check-scope` (file scope + immutable-path integrity), and `verify-claims` (code-snippet existence). **If this fails, REJECT immediately without reading further** — the automated violations are the rejection.
 2. **Algorithm-faithful-to-design:** the scripts confirm files changed as declared and snippets exist as claimed. You confirm the *algorithm* in the code matches what `design.md` prescribes — that the code does what the design says, not just that the declared lines exist. Open the changed files and read the logic.
 3. **Training-signal sanity:** check that losses, optimizers, metrics, and data flow are composed sensibly. Catch subtle bugs the scripts can't: a loss term whose gradient is zero, a metric computed in the wrong mode, a mask applied to the wrong dimension, a learning rate schedule that never fires. Check `test_output/` to confirm the reduced test-train ran correctly and produced the expected outputs.
+4. **Code efficiency:** flag implementations that are needlessly slow given the design's intent. Reject Python-level loops over tensor elements / batch items / pixels where a vectorized equivalent is straightforward, redundant `.cpu()`/`.numpy()` round-trips inside hot paths, unnecessary `.clone()`/`.detach()` copies, recomputation of values that could be cached, and obvious data-loading bottlenecks (e.g. per-sample I/O that should be batched). If `test_output/` shows the step time regressing substantially vs. the parent's `test_output/` without the design calling for it, that is grounds for rejection. Cite the offending lines.
 
 **Code review procedure:**
 1. Receive the target `idea_id` to review.
@@ -51,6 +52,7 @@
    **Automated gate:** PASS | FAIL (<summary>)
    **Algorithm fidelity:** <what you checked vs. design.md — reference specific lines>
    **Training-signal sanity:** <what you checked — loss, optimizer, metric, mask, schedule>
+   **Code efficiency:** <what you checked — vectorization, hot-path copies, step time vs. parent; cite offending lines on REJECTED>
    **Strongest objection:** <mandatory even on APPROVED>
    **Fixes required:** <only on REJECTED>
    ```
