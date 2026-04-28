@@ -8,7 +8,7 @@ Replace the LLM-driven Orchestrator (`agents/Orchestrator/prompt.md`) with a Pyt
 
 ## Non-goals
 
-- No change to sub-agent roles, CSV schema, or `scripts/cli.py` commands.
+- No change to CSV schema or `scripts/cli.py` commands. Sub-agent roles are largely preserved; the one material change is that Builder is now spawned per design and the submit-test/poll/retry loop moves out of Builder into the orchestrator (see "Builder decomposition" below).
 - No merging of sub-agents into a shared conversation. File-based handoff stays the source of truth.
 - No assumption of any particular agent CLI. Claude Code and Codex are equally first-class backends.
 

@@ -16,8 +16,8 @@
 - Defines explicit starting point path for each design.
 
 4. Builder
-- Implements approved design specs in code.
-- Runs sanity tests through `submit-test` before review.
+- Implements one approved design spec at a time and exits after `review-check-implementation` passes.
+- Does **not** run `submit-test` or wait for test results — the orchestrator runs the test, classifies pass/fail, and respawns Builder with the failure log on retry. See `docs/python_orchestrator.md`.
 
 5. Reviewer
 - Reviews designs and implementation quality.

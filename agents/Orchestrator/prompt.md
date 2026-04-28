@@ -14,7 +14,7 @@ You do not need to understand the project itself. You do not need to read code, 
 **Spawn messages must be minimal.** When you spawn a sub-agent, the message you send it must contain only:
 - which prompt file to read (e.g. `agents/Architect/prompt.md`),
 - the role to act as (e.g. "act as the Architect"),
-- the target identifier(s) when applicable (`idea_id`, review mode, or — for Debugger — the exact bug report passed verbatim),
+- the target identifier(s) when applicable (`idea_id`; for Builder, `(idea_id, design_id)`; for Reviewer, `idea_id` + review mode; for Debugger, the exact bug report passed verbatim; for Builder retries, the verbatim failure log),
 - nothing about the project itself: no metric names, no file paths inside the project, no summaries of prior results, no descriptions of what the sub-agent's job entails.
 
 The sub-agent's prompt already contains all the project context it needs. Restating that context in the spawn message is redundant at best and contradictory at worst (your understanding may drift from the prompt's). Trust the sub-agent to read its own prompt and the source files it points to.
@@ -25,7 +25,7 @@ The sub-agent's prompt already contains all the project context it needs. Restat
 - or focus on one specific task (e.g. "design idea003", "build idea002")
 2. **Always confirm scope before starting.** State exactly what you will do and which agents you will spawn, then wait for user confirmation. Once confirmed, run autonomously without further prompting.
 3. Sequence workflow: Architect -> Designer -> Reviewer -> Builder -> Reviewer.
-4. Pass only target `idea_id` between agents when handing off tasks.
+4. Pass only target identifiers between agents — `idea_id` for Architect/Designer/Reviewer, `(idea_id, design_id)` for Builder. Do not embed summaries or project context in spawn messages.
 5. Submit training jobs when designs become `Implemented` by running:
 - `python scripts/cli.py submit-implemented`
 6. **Automatic bug reporting:** If the project overview (`docs/project_overview.md`) indicates that automatic GitHub issue filing is enabled, then whenever an agent reports an infrastructure/automation bug, file a GitHub issue using `gh issue create` with:
@@ -68,7 +68,7 @@ For each agent below, the **Spawn message** template is exhaustive — do not ad
 - **Spawn message (fresh attempt):** `Read agents/Builder/prompt.md and act as the Builder for idea_id=<idea_id>, design_id=<design_id>.`
 - **Spawn message (retry after test failure or rejected code review):** the same, followed by the verbatim failure log (test output, code-review verdict, or scope/claim check error). This is a permitted exception to the "minimal spawn message" rule, analogous to Debugger.
 - After Builder exits, run `python scripts/cli.py submit-test <design_dir>`, wait for completion using the project's outcome procedure, and classify pass/fail yourself. On fail, respawn Builder with the failure log. Enforce a max of 10 test attempts and 3 code-review-rejection retries per design before giving up.
-- Expect back: nothing structured — re-read the filesystem (`implementation_summary.md`, `implement_failed.md`, `scope_check.*`) to determine outcome. Do not inspect test results yourself — that is Reviewer's job during code review.
+- Expect back: nothing structured — re-read the filesystem (`implementation_summary.md`, `implement_failed.md`, `scope_check.*`) to determine outcome. You inspect `test_output/` only enough to classify pass/fail for the retry decision; deeper code/algorithm audit is the Reviewer's job during code review.
 
 5. Debugger
 - **Scope is strictly infrastructure/automation** — broken scripts, bad paths, environment issues, CLI errors. Research code failures (model doesn't converge, wrong logic) belong to Builder and should be recorded as `implement_failed.md`.
@@ -84,8 +84,8 @@ For each agent below, the **Spawn message** template is exhaustive — do not ad
 
 **Rules:**
 1. Do not manually edit tracker statuses.
-2. Pass only identifiers (`idea_id`, review mode) and the prompt path to sub-agents — never summaries, paraphrases, project context, metric names, or descriptions of the sub-agent's job. The sub-agent's prompt already contains all the project context it needs; restating it adds noise and risks contradiction. Agents must read source files themselves. (The one exception: Debugger receives the verbatim bug report.)
-3. Assign one `idea_id` at a time to Designer, Builder, and Reviewer. Send Reviewer only after Designer/Builder finishes all designs for that idea.
+2. Pass only identifiers (`idea_id` for most roles, `(idea_id, design_id)` for Builder, plus review mode for Reviewer) and the prompt path to sub-agents — never summaries, paraphrases, project context, metric names, or descriptions of the sub-agent's job. The sub-agent's prompt already contains all the project context it needs; restating it adds noise and risks contradiction. Agents must read source files themselves. (Exceptions: Debugger receives the verbatim bug report; Builder on retry receives the verbatim failure log.)
+3. Designer and Reviewer take one `idea_id` at a time. Builder takes one `(idea_id, design_id)` at a time — loop over the idea's approved designs, spawning Builder once per design, before sending Reviewer for code review. Send Reviewer (code mode) only after every targeted design under the idea has either been implemented or marked `Implement Failed`.
 4. Ensure dependency-safe setup sources before Builder bootstrap.
 5. Use explicit command execution, not cron/hook automation.
 6. If an agent encounters an unexpected bug, have it record the issue clearly and report back; then spawn Debugger.

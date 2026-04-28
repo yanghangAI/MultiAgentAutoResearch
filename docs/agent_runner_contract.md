@@ -37,7 +37,7 @@ The agent CLI must be able to, within the project working directory and without 
 |---|---|
 | `FILE_READ` | Sub-agents read prompts, CSVs, design files, code. |
 | `FILE_WRITE` | Builder writes code, Designer writes `design.md`, Reviewer writes review files. |
-| `SHELL_EXEC` | Sub-agents run `python scripts/cli.py …` and (Builder) sanity tests. |
+| `SHELL_EXEC` | Sub-agents run `python scripts/cli.py …` (e.g. `setup-design`, `review-check-implementation`, `sync-status`). Note: `submit-test` and the test-completion poll are run by the orchestrator, not by Builder. |
 | `WEB_SEARCH` | Architect uses bounded literature searches. |
 | `WEB_FETCH` | Architect reads abstracts. |
 

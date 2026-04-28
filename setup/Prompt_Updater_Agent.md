@@ -37,7 +37,7 @@ For each agent in `agents/*/prompt.md` and `agents/Architect/prompt_explorer.md`
 - Match the runtime environment (e.g. SLURM-specific language if applicable).
 - Include the "what never changes" contract: which files/params are invariant across designs.
 - Include the "what's experimentable" list: which files agents may modify.
-- **Fill in the test-completion placeholders inline in `agents/Builder/prompt.md`** (in the step that runs `submit-test`). Replace every `<...>` placeholder — completion-detection command/procedure, polling interval, timeout, outcome-read procedure — with concrete commands and values from the confirmed setup summary. If `submit_test.sh` was modified to emit a sentinel file, reflect that exact filename. Do not leave any placeholder.
+- **Builder no longer owns the submit-test/poll loop**, so do not insert completion-detection commands, polling intervals, or outcome-read procedures into `agents/Builder/prompt.md`. Those values now belong in `.automation.json` (consumed by `scripts/orchestrator.py` or by the LLM Orchestrator fallback in `agents/Orchestrator/prompt.md`). If older versions of the Builder prompt contain `<completion-detection ...>` / `<polling interval>` / `<timeout>` / `<outcome-read ...>` placeholders, leave them out — they are obsolete.
 
 Keep strictly unchanged:
 - Each agent's role definition and responsibilities.
