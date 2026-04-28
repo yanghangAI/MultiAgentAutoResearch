@@ -65,6 +65,15 @@ def build_context(ctx: ProjectContext) -> dict[str, object]:
     ideas = read_csv(layout.idea_csv_path(root_path))
     results = read_csv(layout.results_csv_path(root_path))
 
+    # Build a (idea, design) -> stale_since lookup from per-idea design CSVs.
+    stale_lookup: dict[tuple[str, str], str] = {}
+    for csv_path in sorted(layout.runs_dir(root_path).glob("idea*/design_overview.csv")):
+        idea_id_for_csv = csv_path.parent.name
+        for d_row in read_csv(csv_path):
+            stale_since = (d_row.get("Stale_Since") or "").strip()
+            if stale_since:
+                stale_lookup[(idea_id_for_csv, d_row.get("Design_ID", ""))] = stale_since
+
     result_rows: list[dict[str, object]] = []
     for row in results:
         idea_id = row.get("idea_id", "")
@@ -79,6 +88,7 @@ def build_context(ctx: ProjectContext) -> dict[str, object]:
                 "metric_1_name": metric_1,
                 "metric_2_name": metric_2,
                 "is_baseline": _is_baseline_result(cfg, idea_id, design_id),
+                "stale_since": stale_lookup.get((idea_id, design_id), ""),
                 "idea_url": _github_blob_url(cfg, "runs", idea_id, "idea.md"),
                 "design_url": _github_blob_url(cfg, "runs", idea_id, design_id, "design.md"),
             }
@@ -170,6 +180,13 @@ def render_dashboard(context: dict[str, object]) -> str:
         train_val = _format_metric(row["metric_1_value"])
         val_val = _format_metric(row["metric_2_value"])
         badge = ' <span class="badge bg-secondary">Baseline</span>' if row["is_baseline"] else ""
+        stale_since = str(row.get("stale_since", "") or "")
+        if stale_since:
+            badge += (
+                f' <span class="badge bg-warning text-dark" '
+                f'title="Results predate {escape(stale_since)} — see revisions.md">'
+                f'Stale since {escape(stale_since)}</span>'
+            )
         tr_class = " class='table-secondary'" if row["is_baseline"] else ""
         html += (
             f"                    <tr{tr_class}>\n"

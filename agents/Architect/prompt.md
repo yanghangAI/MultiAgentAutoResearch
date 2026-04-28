@@ -10,7 +10,7 @@ Always pick exactly one and state explicitly which it is in your handoff. In eit
 
 **Task:**
 1. Read the baseline files to understand what design decisions are currently hardcoded and available for variation.
-2. Read `runs/idea_overview.csv` and `results.csv` to identify what has been tried, what performed well, and what patterns have emerged.
+2. Read `runs/idea_overview.csv` and `results.csv` to identify what has been tried, what performed well, and what patterns have emerged. If `revisions.md` exists at the repo root, skim it: any result whose design row has a non-empty `Stale_Since` column was produced under an earlier project state, and the linked revision's **Comparability note** tells you what is and isn't directly comparable to current designs.
 3. Selectively read the `idea.md` or `design.md` of past ideas/designs that are genuinely relevant to your proposal (e.g. a top performer you want to extend, or one that looks similar to your direction). Do not attempt to read all past work.
 4. Decide action A or B (see above) and decide the starting point. If you choose action B, cite the idea_id you are extending and why extension is warranted. If the starting point is a prior design, pick one whose status is `Done` (preferred) or `Implemented` — tainted designs must not be chosen.
 5. If the user has provided an idea or direction, refine it collaboratively before proceeding:

@@ -9,7 +9,7 @@ from pathlib import Path
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from scripts.lib import claims, dashboard, deploy, results, review, scope, status, submit, validate  # noqa: E402
+from scripts.lib import claims, dashboard, deploy, results, review, revision_cli, scope, status, submit, validate  # noqa: E402
 from scripts.lib.context import ProjectContext  # noqa: E402
 from scripts.lib.layout import repo_root  # noqa: E402
 
@@ -87,6 +87,14 @@ def build_parser() -> argparse.ArgumentParser:
     deploy_parser.add_argument("--allow-dirty", action="store_true")
     deploy_parser.add_argument("--no-push", action="store_true")
 
+    begin_rev_parser = subparsers.add_parser("begin-revision")
+    begin_rev_parser.add_argument("name")
+    begin_rev_parser.add_argument("--allow-dirty", action="store_true")
+    begin_rev_parser.add_argument("--root", type=Path, default=repo_root())
+
+    finalize_rev_parser = subparsers.add_parser("finalize-revision")
+    finalize_rev_parser.add_argument("--root", type=Path, default=repo_root())
+
     update_parser = subparsers.add_parser("update-all")
     update_parser.add_argument("--root", type=Path, default=repo_root())
     update_parser.add_argument("--allow-dirty", action="store_true")
@@ -145,6 +153,14 @@ def main(argv: list[str] | None = None) -> int:
         dashboard.build_dashboard(ctx)
     elif args.command == "deploy-dashboard":
         deploy.deploy_dashboard(root=ctx.root, allow_dirty=args.allow_dirty, push=not args.no_push)
+    elif args.command == "begin-revision":
+        rc = revision_cli.begin_revision(args.name, ctx, allow_dirty=args.allow_dirty)
+        if rc != 0:
+            raise SystemExit(rc)
+    elif args.command == "finalize-revision":
+        rc = revision_cli.finalize_revision(ctx)
+        if rc != 0:
+            raise SystemExit(rc)
     elif args.command == "update-all":
         status.sync_all(ctx)
         ctx = ProjectContext.create(ctx.root)  # fresh context after sync mutates CSVs

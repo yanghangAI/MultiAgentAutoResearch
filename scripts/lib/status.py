@@ -7,7 +7,7 @@ from pathlib import Path
 
 from typing import TYPE_CHECKING
 
-from scripts.lib import layout, results as results_service, scope as scope_mod, store
+from scripts.lib import layout, results as results_service, revisions as revisions_mod, scope as scope_mod, store
 from scripts.lib.models import Status
 
 if TYPE_CHECKING:
@@ -15,7 +15,15 @@ if TYPE_CHECKING:
 
 
 IDEA_HEADERS = ["Idea_ID", "Idea_Name", "Status", "created_at", "updated_at"]
-DESIGN_HEADERS = ["Design_ID", "Design_Description", "Status", "created_at", "updated_at"]
+DESIGN_HEADERS = [
+    "Design_ID",
+    "Design_Description",
+    "Status",
+    "Revision",
+    "Stale_Since",
+    "created_at",
+    "updated_at",
+]
 
 
 def _now() -> str:
@@ -224,6 +232,12 @@ def derive_design_status(
         return Status.TAINTED
     row = ctx.results_index.get((idea_id, design_id))
     if row:
+        # Stamp this design with the current revision id the first time we
+        # see results for it. Stamping is write-once: it captures the
+        # project state results were produced under.
+        revisions_mod.stamp_design_revision(
+            design_path, revisions_mod.current_revision_id(ctx.root)
+        )
         progress_field = cfg.status.progress_field
         try:
             progress = int(float(row.get(progress_field, "0")))
@@ -310,6 +324,7 @@ def sync_all(ctx: ProjectContext) -> None:
     cfg = ctx.cfg
     runs = layout.runs_dir(ctx.root)
     now = _now()
+    revisions_list = revisions_mod.parse_revisions(ctx.root)
 
     # --- Rebuild idea and design CSVs from filesystem ---
     idea_rows: list[dict[str, str]] = []
@@ -336,10 +351,18 @@ def sync_all(ctx: ProjectContext) -> None:
 
             description = infer_design_description(idea_id, design_id, root=ctx.root)
             design_status = derive_design_status(idea_id, design_id, ctx)
+            stamp = revisions_mod.design_revision(design_path)
+            stale_ids: list[str] = []
+            if revisions_list:
+                stale_ids = revisions_mod.staling_revisions(
+                    design_path, root=ctx.root, revisions=revisions_list
+                )
             design_rows.append({
                 "Design_ID": design_id,
                 "Design_Description": description,
                 "Status": design_status or Status.NOT_IMPLEMENTED,
+                "Revision": stamp or "",
+                "Stale_Since": stale_ids[0] if stale_ids else "",
                 "created_at": now,
                 "updated_at": now,
             })

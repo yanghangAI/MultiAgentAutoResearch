@@ -73,6 +73,8 @@ Scripts do the structural work — agents only make the judgment calls that can'
 
 **Taint propagation** — if `scope_check.fail` exists on any ancestor, the design is marked `Tainted`, excluded from `results.csv` aggregation, and flagged in the dashboard. The invariant: the only way to compromise results is to modify `infra/`, and modifying `infra/` is mechanically detectable.
 
+**Project revisions** — when a campaign needs a cross-cutting change (new metric in `infra/`, edited `baseline/`, prompt update, etc.) that the normal idea → design loop can't make, the user invokes the **Reviser** agent. The flow is gated by `python scripts/cli.py begin-revision "<name>"` (refuses if the working tree is dirty or designs are in flight; tags `pre-revNNN` on git HEAD; appends a skeleton entry to `revisions.md`) and `python scripts/cli.py finalize-revision` (validates the entry has a populated `**Scope:**` block and propagates staleness). Designs whose results were produced before a revision whose scope overlaps with their dependencies are flagged `Stale_Since: revNNN` in the design CSV and badged in the dashboard. Stale is distinct from Tainted: results stay in `results.csv`, but the Architect knows from the revision's **Comparability note** what is and isn't directly comparable.
+
 **Mistake log** — each agent's `agents/<agent>/memory.md` is a structured append-only log of past errors. Scripts auto-append an entry to `agents/Builder/memory.md` whenever `check-scope` or `verify-claims` fails; the Reviewer appends entries to the Designer's or Builder's memory on any REJECTED verdict. Agents read their own memory at the start of every invocation.
 
 ---
@@ -287,4 +289,6 @@ python scripts/cli.py submit-implemented       # submit all Implemented designs
 python scripts/cli.py build-dashboard          # generate website/index.html
 python scripts/cli.py deploy-dashboard         # push dashboard to gh-pages
 python scripts/cli.py update-all               # sync + build + deploy in one step
+python scripts/cli.py begin-revision <name>    # start a logged cross-cutting change (Reviser agent)
+python scripts/cli.py finalize-revision        # validate revisions.md entry + propagate staleness
 ```
