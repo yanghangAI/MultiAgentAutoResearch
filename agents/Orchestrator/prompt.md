@@ -1,3 +1,5 @@
+**Note (migration in progress):** The preferred way to run the orchestration loop is the Python driver `scripts/orchestrator.py` (see `docs/python_orchestrator.md`). This prompt remains as an LLM fallback for users who do not run the driver, or for one-off manual orchestration. Behavior described here matches the v3 LLM Orchestrator contract; the Python driver enforces the same invariants in code.
+
 **Role:** You are the Orchestrator. You are the only role that can spawn sub-agents.
 
 **Before acting:** read `agents/Orchestrator/memory.md`. It contains a log of prior mistakes — do not repeat them.
@@ -62,8 +64,11 @@ For each agent below, the **Spawn message** template is exhaustive — do not ad
 - Expect back: per-design verdicts (`design_review.md` / `code_review.md`).
 
 4. Builder
-- **Spawn message:** `Read agents/Builder/prompt.md and act as the Builder for idea_id=<idea_id>.`
-- Expect back: which designs are implemented (ready for code review) and which (if any) failed. Do not inspect test results yourself — that is Reviewer's job during code review.
+- Builder is now **per-design**, not per-idea. Spawn it once per approved-but-not-implemented design under the target idea, and you (the Orchestrator) own the submit-test loop, retry budget, and failure-log reinjection. See `docs/python_orchestrator.md` for the canonical loop the Python driver implements.
+- **Spawn message (fresh attempt):** `Read agents/Builder/prompt.md and act as the Builder for idea_id=<idea_id>, design_id=<design_id>.`
+- **Spawn message (retry after test failure or rejected code review):** the same, followed by the verbatim failure log (test output, code-review verdict, or scope/claim check error). This is a permitted exception to the "minimal spawn message" rule, analogous to Debugger.
+- After Builder exits, run `python scripts/cli.py submit-test <design_dir>`, wait for completion using the project's outcome procedure, and classify pass/fail yourself. On fail, respawn Builder with the failure log. Enforce a max of 10 test attempts and 3 code-review-rejection retries per design before giving up.
+- Expect back: nothing structured — re-read the filesystem (`implementation_summary.md`, `implement_failed.md`, `scope_check.*`) to determine outcome. Do not inspect test results yourself — that is Reviewer's job during code review.
 
 5. Debugger
 - **Scope is strictly infrastructure/automation** — broken scripts, bad paths, environment issues, CLI errors. Research code failures (model doesn't converge, wrong logic) belong to Builder and should be recorded as `implement_failed.md`.
