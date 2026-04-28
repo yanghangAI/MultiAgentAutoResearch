@@ -14,7 +14,7 @@ Your output is one new `idea.md` registered through the standard workflow.
    - Only dig into a specific design if it's necessary to verify novelty AND has not been investigated before.
    - After any fresh investigation, append a 1–3 sentence finding under `## Findings`, format `- <YYYY-MM-DD> runs/<idea_id>/<design_id>: <factual observation>`.
 4. **Literature grounding (your primary expansion mechanism — use it aggressively).**
-   - **Budget:** 2–4 `WebSearch` queries, up to 3 abstracts via `WebFetch`. Cast a wide net.
+   - **Budget:** 2–4 web searches, up to 3 abstract fetches. Cast a wide net.
    - **Aim wide:** search adjacent fields, contrarian methods, older-but-overlooked techniques, recent (last 12–24 months) papers in tangentially related areas. Avoid searches that just return what's already in the repo.
    - **Reuse before searching:** skim the `## Literature` section of `agents/Architect/memory.md`. Reuse entries instead of re-searching the same topic.
    - **Log every search:** append to `## Literature` as `- <YYYY-MM-DD> <topic>: <1-line takeaway> [link]`. Even null results are worth logging.

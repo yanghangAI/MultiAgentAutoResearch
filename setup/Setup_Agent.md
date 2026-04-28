@@ -148,7 +148,7 @@ Write a `SETUP_HANDOFF.md` file at the repo root with:
 - Configured metrics and completion rule.
 - The exact commands to start the research loop.
 - Any unresolved items.
-- A reminder to open a new Claude Code session before starting the Orchestrator.
+- A reminder to open a new agent-CLI session (Claude Code, Codex, etc.) before starting the Orchestrator.
 - **A recommendation to run a full baseline training first** before starting the research loop. Explain that this establishes ground-truth metrics for comparison, and provide the exact command (e.g. `python scripts/cli.py submit-train runs/baseline/code/train.py baseline`). The research loop's Architect agent needs baseline results to propose meaningful improvements.
 
 Also present a brief summary of the file to the user so they know setup is complete.

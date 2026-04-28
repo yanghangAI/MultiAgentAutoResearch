@@ -93,13 +93,13 @@ No dependencies beyond the Python standard library (plus `pytest` to run tests).
 
 ### 2. Run the Setup Agent
 
-Open Claude Code in this repository. Enable **bypass mode** (ask claude to do it for you) so the agent can read and write files without interruption.
+Open your agent CLI of choice in this repository — **Claude Code**, **Codex**, or any equivalent that can read/write files and run shell commands. Enable the CLI's non-interactive permission mode (e.g. Claude Code's "bypass mode", Codex's auto-approve) so the agent can read and write files without per-action prompts.
 
 Then tell it to act as the Setup Agent:
 
 > Read `setup/Setup_Agent.md` and act as the Setup Agent.
 
-Claude Code will take it from there. The Setup Agent:
+The Setup Agent will take it from there:
 - Reads your training code to understand metrics, config, and runtime environment
 - Asks you clarifying questions if anything is ambiguous
 - Configures `.automation.json` for your project
@@ -107,11 +107,14 @@ Claude Code will take it from there. The Setup Agent:
 - Updates all agent prompts with your project's vocabulary and conventions
 - Validates the full pipeline end-to-end before handing off
 
-After setup finishes, close that setup session and open a new Claude Code session before starting the Orchestrator.
+After setup finishes, close that session and open a new agent-CLI session before starting the Orchestrator.
 
 ### 3. Start the research loop
 
-In a new Claude Code session, tell it to act as the Orchestrator:
+You can run the orchestration loop in two equivalent ways:
+
+- **Python driver (recommended, agent-CLI agnostic):** `python scripts/orchestrator.py` — a state machine that re-snapshots the filesystem each step and spawns sub-agents through whichever CLI is configured in `.automation.json` (`claude-code`, `codex`, or any registered runner). See `docs/python_orchestrator.md` and `docs/agent_runner_contract.md`. *(This driver is in active development on the `python-orchestrator` branch.)*
+- **LLM Orchestrator (fallback):** open a new agent-CLI session and tell it to act as the Orchestrator:
 
 > Read `agents/Orchestrator/prompt.md` and act as the Orchestrator.
 
