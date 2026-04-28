@@ -27,6 +27,7 @@ import enum
 import json
 import shutil
 import subprocess
+import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -138,6 +139,8 @@ class _TemplateRunner:
         spawn_message: str,
         cwd: Path,
         timeout_s: int,
+        stdout_path: Path | None = None,
+        stderr_path: Path | None = None,
     ) -> RunResult:
         # `prompt_file` is an existence guard, not piped to the child.
         # Sub-agents load their own prompt via the spawn message ("Read ...").
@@ -148,31 +151,47 @@ class _TemplateRunner:
             raise FileNotFoundError(f"prompt file not found: {prompt_file}")
         argv = self.build_command(spawn_message)
         start = time.monotonic()
+
+        # Stream stdout/stderr to disk so memory is bounded for long
+        # sub-agent runs. If caller supplied paths, persist there for
+        # post-mortem; otherwise use temp files that are deleted on exit.
+        out_ctx, out_path = _open_capture(stdout_path)
+        err_ctx, err_path = _open_capture(stderr_path)
         try:
-            proc = subprocess.run(
-                argv,
-                cwd=str(cwd),
-                capture_output=True,
-                text=True,
-                timeout=timeout_s,
-                check=False,
-            )
-            elapsed = time.monotonic() - start
-            return RunResult(
-                exit_code=proc.returncode,
-                stdout_tail=_tail(proc.stdout),
-                stderr_tail=_tail(proc.stderr),
-                elapsed_s=elapsed,
-            )
-        except subprocess.TimeoutExpired as exc:
-            elapsed = time.monotonic() - start
-            return RunResult(
-                exit_code=-1,
-                stdout_tail=_tail(exc.stdout or ""),
-                stderr_tail=_tail(exc.stderr or ""),
-                elapsed_s=elapsed,
-                timed_out=True,
-            )
+            with out_ctx as out_f, err_ctx as err_f:
+                try:
+                    proc = subprocess.run(
+                        argv,
+                        cwd=str(cwd),
+                        stdout=out_f,
+                        stderr=err_f,
+                        timeout=timeout_s,
+                        check=False,
+                    )
+                    elapsed = time.monotonic() - start
+                    out_f.flush()
+                    err_f.flush()
+                    return RunResult(
+                        exit_code=proc.returncode,
+                        stdout_tail=_read_file_tail(out_path),
+                        stderr_tail=_read_file_tail(err_path),
+                        elapsed_s=elapsed,
+                    )
+                except subprocess.TimeoutExpired:
+                    elapsed = time.monotonic() - start
+                    out_f.flush()
+                    err_f.flush()
+                    return RunResult(
+                        exit_code=-1,
+                        stdout_tail=_read_file_tail(out_path),
+                        stderr_tail=_read_file_tail(err_path),
+                        elapsed_s=elapsed,
+                        timed_out=True,
+                    )
+        finally:
+            # Tempfile cleanup is handled by the context manager; persisted
+            # paths stay on disk for the audit log.
+            pass
 
 
 class ClaudeCodeRunner(_TemplateRunner):
@@ -289,3 +308,53 @@ def _tail(text: str, limit: int = DEFAULT_OUTPUT_TAIL_BYTES) -> str:
     if len(encoded) <= limit:
         return text
     return encoded[-limit:].decode("utf-8", errors="replace")
+
+
+def _open_capture(path: Path | None):
+    """Return a (context_manager, resolved_path) pair.
+
+    If `path` is given, opens it for writing and returns the file handle.
+    Otherwise, opens a NamedTemporaryFile that is deleted when the context
+    exits. Either way the caller writes to the handle and reads the tail
+    from `resolved_path` afterward.
+    """
+    if path is not None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path.open("wb"), path
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".log")
+    return _DeleteOnClose(tmp), Path(tmp.name)
+
+
+class _DeleteOnClose:
+    """Wrap a NamedTemporaryFile so it deletes its path on context exit."""
+
+    def __init__(self, file) -> None:
+        self._file = file
+
+    def __enter__(self):
+        return self._file
+
+    def __exit__(self, *exc) -> None:
+        try:
+            self._file.close()
+        finally:
+            try:
+                Path(self._file.name).unlink()
+            except FileNotFoundError:
+                pass
+
+
+def _read_file_tail(path: Path, limit: int = DEFAULT_OUTPUT_TAIL_BYTES) -> str:
+    """Read up to `limit` bytes from the end of a file, decoded permissively."""
+    try:
+        size = path.stat().st_size
+    except (OSError, FileNotFoundError):
+        return ""
+    try:
+        with path.open("rb") as handle:
+            if size > limit:
+                handle.seek(-limit, 2)
+            data = handle.read()
+    except OSError:
+        return ""
+    return data.decode("utf-8", errors="replace")

@@ -28,6 +28,11 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from scripts.lib.context import ProjectContext  # noqa: E402
+from scripts.lib.orchestration.builder_loop import (  # noqa: E402
+    BuilderLoopConfig,
+    _AuditLogger,
+    run_builder_loop,
+)
 from scripts.lib.orchestration.runner import (  # noqa: E402
     AgentRunner,
     RunResult,
@@ -186,34 +191,43 @@ def main(argv: list[str] | None = None) -> int:
     if action.role == "Submit":
         return _execute_submit(ctx)
 
-    if action.role == "Builder":
-        # Phase-3a caveat: --once spawns Builder exactly once, with no
-        # subsequent submit-test/poll/retry. The design will appear ready
-        # for code review on the next snapshot, bypassing test validation.
-        # Phase 3b implements the driver-owned loop. Until then this is a
-        # warning, not a refusal — useful for runner smoke tests but not
-        # for production campaigns.
-        print(
-            "WARNING: Builder --once skips submit-test/poll/retry "
-            "(Phase 3b territory). The next snapshot will see "
-            "implementation_summary.md and route to code review without "
-            "test validation. Do not use in production until Phase 3b."
-        )
-
     session_id = uuid.uuid4().hex
     print(f"  session_id={session_id}")
     runner = runner_for_role(action.role, ctx.root)
+
+    if action.role == "Builder":
+        loop_cfg = BuilderLoopConfig.load(ctx.root)
+        log_path = ctx.root / "logs" / "orchestrator" / f"{time.strftime('%Y%m%d')}.jsonl"
+        audit = _AuditLogger(log_path)
+        loop_result = run_builder_loop(
+            action=action,
+            ctx=ctx,
+            runner=runner,
+            cfg=loop_cfg,
+            parent_session_id=session_id,
+            timeout_s=args.timeout_s,
+            audit_log=audit,
+        )
+        print(
+            f"  builder_loop attempts={loop_result.attempts} "
+            f"outcome={loop_result.last_outcome.value if loop_result.last_outcome else 'none'} "
+            f"dispatched_ok={loop_result.dispatched_ok} "
+            f"notes={loop_result.notes!r}"
+        )
+        # Exit code semantics:
+        #   0 = the driver dispatched cleanly (Builder ran, retries were
+        #       enforced, terminal state — pass / implement_failed.md /
+        #       budget exhaustion — is on disk).
+        #   1 = driver-side failure (CLI crashed, timeout, etc.)
+        return 0 if loop_result.dispatched_ok else 1
+
+    # Non-Builder roles: single dispatch, single audit record.
     result = _execute_via_runner(action, ctx, runner, args.timeout_s, session_id)
     print(
         f"  exit_code={result.exit_code} "
         f"elapsed={result.elapsed_s:.1f}s "
         f"timed_out={result.timed_out}"
     )
-    # Exit code semantics:
-    #   0 = the driver completed its dispatch (the agent's own pass/fail
-    #       lives on disk in implementation_summary.md / *_review.md /
-    #       implement_failed.md and is read on the next snapshot).
-    #   1 = driver-side failure: timeout or non-zero CLI exit.
     return 0 if result.ok else 1
 
 
