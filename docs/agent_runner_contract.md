@@ -52,7 +52,7 @@ A runner whose CLI cannot deliver all of `FILE_READ`, `FILE_WRITE`, `SHELL_EXEC`
 
 ## Configuration
 
-Each runner reads its own config block from `.automation.json` under `agent_runner.<name>`. Required keys are runner-defined (e.g. `command`, `permission_mode` for Claude Code; `command`, `approval_mode` for Codex). The orchestrator passes the block to the adapter at construction time.
+Each runner reads its own config block from `.automation.json` under `agent_runner.<name>`. The single configurable key is `command_template`: a JSON array of argv elements where the literal string `"{spawn_message}"` is replaced with the actual spawn message at call time. Defaults are baked into the adapters; users override only when they need different flags (e.g. a different permission mode, an approval flag, JSON output format). Adapters that need additional knobs can read more keys from the same block, but the registered adapters in this repo stick to `command_template` only.
 
 ## Adapters provided
 

@@ -13,14 +13,18 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.lib.orchestration.runner import (
+    REQUIRED_CAPABILITIES,
     SPAWN_PLACEHOLDER,
+    Capability,
     ClaudeCodeRunner,
     CodexRunner,
     RunResult,
     _TemplateRunner,
+    configured_runner_names,
     load_runner_config,
     register_runner,
     runner_for_role,
+    validate_all_runners,
 )
 
 
@@ -167,3 +171,65 @@ def test_third_party_runner_can_register() -> None:
     register_runner(Aider)
     runner = Aider()
     assert runner.build_command("x") == ["aider", "x"]
+
+
+def test_runners_declare_required_capabilities() -> None:
+    for runner in (ClaudeCodeRunner(), CodexRunner()):
+        caps = runner.capabilities()
+        assert REQUIRED_CAPABILITIES.issubset(caps), (
+            f"{runner.name} missing required caps: "
+            f"{REQUIRED_CAPABILITIES - caps}"
+        )
+
+
+def test_configured_runner_names_collects_default_and_per_role(tmp_path: Path) -> None:
+    (tmp_path / ".automation.json").write_text(
+        json.dumps(
+            {
+                "agent_runner": {
+                    "default": "claude-code",
+                    "per_role": {"Reviewer": "codex", "Architect": "codex"},
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert configured_runner_names(tmp_path) == {"claude-code", "codex"}
+
+
+def test_validate_all_runners_passes_when_all_available(tmp_path: Path) -> None:
+    (tmp_path / ".automation.json").write_text(
+        json.dumps(
+            {"agent_runner": {"default": "claude-code", "per_role": {"Reviewer": "codex"}}}
+        ),
+        encoding="utf-8",
+    )
+    with patch("shutil.which", return_value="/usr/bin/dummy"):
+        validate_all_runners(tmp_path)  # must not raise
+
+
+def test_validate_all_runners_fails_on_unknown_name(tmp_path: Path) -> None:
+    (tmp_path / ".automation.json").write_text(
+        json.dumps({"agent_runner": {"default": "nope-cli"}}),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="unknown runner"):
+        validate_all_runners(tmp_path)
+
+
+def test_validate_all_runners_fails_when_per_role_cli_missing(tmp_path: Path) -> None:
+    """Even if the chosen role uses claude-code, a misconfigured per_role
+    entry must surface at startup, not at the moment Reviewer is picked."""
+    (tmp_path / ".automation.json").write_text(
+        json.dumps(
+            {"agent_runner": {"default": "claude-code", "per_role": {"Reviewer": "codex"}}}
+        ),
+        encoding="utf-8",
+    )
+
+    def _which(cmd: str) -> str | None:
+        return "/usr/bin/claude" if cmd == "claude" else None
+
+    with patch("shutil.which", side_effect=_which):
+        with pytest.raises(RuntimeError, match="codex"):
+            validate_all_runners(tmp_path)

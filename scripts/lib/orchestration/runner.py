@@ -23,6 +23,7 @@ captured into RunResult for the audit log only.
 
 from __future__ import annotations
 
+import enum
 import json
 import shutil
 import subprocess
@@ -34,6 +35,21 @@ from typing import Protocol
 
 SPAWN_PLACEHOLDER = "{spawn_message}"
 DEFAULT_OUTPUT_TAIL_BYTES = 8 * 1024
+
+
+class Capability(enum.Enum):
+    FILE_READ = "file_read"
+    FILE_WRITE = "file_write"
+    SHELL_EXEC = "shell_exec"
+    WEB_SEARCH = "web_search"
+    WEB_FETCH = "web_fetch"
+
+
+# Sub-agents need at minimum these three. Web access is required only for
+# Architect; runners that lack it can still serve Designer/Reviewer/Builder.
+REQUIRED_CAPABILITIES: frozenset[Capability] = frozenset(
+    {Capability.FILE_READ, Capability.FILE_WRITE, Capability.SHELL_EXEC}
+)
 
 
 @dataclass(frozen=True)
@@ -53,6 +69,7 @@ class AgentRunner(Protocol):
     name: str
 
     def is_available(self) -> bool: ...
+    def capabilities(self) -> frozenset[Capability]: ...
     def build_command(self, spawn_message: str) -> list[str]: ...
     def run(
         self,
@@ -75,6 +92,15 @@ class _TemplateRunner:
 
     name: str
     default_template: tuple[str, ...] = ()
+    declared_capabilities: frozenset[Capability] = frozenset(
+        {
+            Capability.FILE_READ,
+            Capability.FILE_WRITE,
+            Capability.SHELL_EXEC,
+            Capability.WEB_SEARCH,
+            Capability.WEB_FETCH,
+        }
+    )
 
     def __init__(self, cfg: dict | None = None) -> None:
         cfg = cfg or {}
@@ -96,6 +122,9 @@ class _TemplateRunner:
     def is_available(self) -> bool:
         return shutil.which(self.command) is not None
 
+    def capabilities(self) -> frozenset[Capability]:
+        return self.declared_capabilities
+
     def build_command(self, spawn_message: str) -> list[str]:
         return [
             spawn_message if part == SPAWN_PLACEHOLDER else part
@@ -110,6 +139,11 @@ class _TemplateRunner:
         cwd: Path,
         timeout_s: int,
     ) -> RunResult:
+        # `prompt_file` is an existence guard, not piped to the child.
+        # Sub-agents load their own prompt via the spawn message ("Read ...").
+        # Passing the file here lets the runner fail fast if the prompt is
+        # missing, without coupling adapters to specific CLI flags for
+        # system-prompt injection.
         if not prompt_file.is_file():
             raise FileNotFoundError(f"prompt file not found: {prompt_file}")
         argv = self.build_command(spawn_message)
@@ -183,6 +217,44 @@ def load_runner_config(root: Path) -> dict:
         return {}
     block = data.get("agent_runner")
     return block if isinstance(block, dict) else {}
+
+
+def configured_runner_names(root: Path) -> set[str]:
+    """Every runner name referenced by .automation.json (default + per_role)."""
+    cfg = load_runner_config(root)
+    names: set[str] = set()
+    default = cfg.get("default") or "claude-code"
+    names.add(default)
+    per_role = cfg.get("per_role") or {}
+    if isinstance(per_role, dict):
+        for value in per_role.values():
+            if isinstance(value, str):
+                names.add(value)
+    return names
+
+
+def validate_all_runners(root: Path) -> None:
+    """Construct every configured runner and verify it is on PATH.
+
+    Called at orchestrator startup so a typo or a missing CLI is surfaced
+    immediately, even if the chosen role for this invocation does not need
+    that runner. Raises ValueError or RuntimeError on the first failure.
+    """
+    cfg = load_runner_config(root)
+    for name in sorted(configured_runner_names(root)):
+        if name not in _REGISTRY:
+            raise ValueError(
+                f"unknown runner {name!r} in .automation.json agent_runner; "
+                f"registered: {sorted(_REGISTRY)}"
+            )
+        runner_cls = _REGISTRY[name]
+        runner_cfg = cfg.get(name, {}) if isinstance(cfg.get(name), dict) else {}
+        runner = runner_cls(runner_cfg)
+        if not runner.is_available():
+            raise RuntimeError(
+                f"runner {name!r} is configured in .automation.json but its "
+                f"command {runner.command!r} is not on PATH"
+            )
 
 
 def runner_for_role(role: str, root: Path) -> AgentRunner:

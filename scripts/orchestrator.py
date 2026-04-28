@@ -19,6 +19,7 @@ import json
 import subprocess
 import sys
 import time
+import uuid
 from pathlib import Path
 
 # Allow running as a script from the repo root.
@@ -31,6 +32,7 @@ from scripts.lib.orchestration.runner import (  # noqa: E402
     AgentRunner,
     RunResult,
     runner_for_role,
+    validate_all_runners,
 )
 from scripts.lib.orchestration.scheduler import pick_next  # noqa: E402
 from scripts.lib.orchestration.state import RichState  # noqa: E402
@@ -83,7 +85,11 @@ def _execute_submit(ctx: ProjectContext) -> int:
 
 
 def _execute_via_runner(
-    action: Action, ctx: ProjectContext, runner: AgentRunner, timeout_s: int
+    action: Action,
+    ctx: ProjectContext,
+    runner: AgentRunner,
+    timeout_s: int,
+    session_id: str,
 ) -> RunResult:
     prompt_file = _resolve_prompt_file(action, ctx)
     print(f"$ runner={runner.name} command={runner.build_command(action.spawn_message)}")
@@ -93,17 +99,22 @@ def _execute_via_runner(
         cwd=ctx.root,
         timeout_s=timeout_s,
     )
-    _append_audit_log(ctx, action, runner.name, result)
+    _append_audit_log(ctx, action, runner.name, result, session_id)
     return result
 
 
 def _append_audit_log(
-    ctx: ProjectContext, action: Action, runner_name: str, result: RunResult
+    ctx: ProjectContext,
+    action: Action,
+    runner_name: str,
+    result: RunResult,
+    session_id: str,
 ) -> None:
     log_dir = ctx.root / "logs" / "orchestrator"
     log_dir.mkdir(parents=True, exist_ok=True)
     record = {
         "ts": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "session_id": session_id,
         "role": action.role,
         "idea_id": action.idea_id,
         "design_id": action.design_id,
@@ -157,6 +168,13 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     ctx = ProjectContext.create(args.root)
+
+    # Validate every configured runner up front (fail-loud at startup, even
+    # for runners this invocation will not actually use). Only relevant in
+    # --once mode; --dry-run does not invoke any runner.
+    if args.once:
+        validate_all_runners(ctx.root)
+
     state = RichState.snapshot(ctx)
     action = pick_next(state, prefer_in_flight=args.prefer_in_flight)
     print(_format_action(action))
@@ -168,13 +186,34 @@ def main(argv: list[str] | None = None) -> int:
     if action.role == "Submit":
         return _execute_submit(ctx)
 
+    if action.role == "Builder":
+        # Phase-3a caveat: --once spawns Builder exactly once, with no
+        # subsequent submit-test/poll/retry. The design will appear ready
+        # for code review on the next snapshot, bypassing test validation.
+        # Phase 3b implements the driver-owned loop. Until then this is a
+        # warning, not a refusal — useful for runner smoke tests but not
+        # for production campaigns.
+        print(
+            "WARNING: Builder --once skips submit-test/poll/retry "
+            "(Phase 3b territory). The next snapshot will see "
+            "implementation_summary.md and route to code review without "
+            "test validation. Do not use in production until Phase 3b."
+        )
+
+    session_id = uuid.uuid4().hex
+    print(f"  session_id={session_id}")
     runner = runner_for_role(action.role, ctx.root)
-    result = _execute_via_runner(action, ctx, runner, args.timeout_s)
+    result = _execute_via_runner(action, ctx, runner, args.timeout_s, session_id)
     print(
         f"  exit_code={result.exit_code} "
         f"elapsed={result.elapsed_s:.1f}s "
         f"timed_out={result.timed_out}"
     )
+    # Exit code semantics:
+    #   0 = the driver completed its dispatch (the agent's own pass/fail
+    #       lives on disk in implementation_summary.md / *_review.md /
+    #       implement_failed.md and is read on the next snapshot).
+    #   1 = driver-side failure: timeout or non-zero CLI exit.
     return 0 if result.ok else 1
 
 

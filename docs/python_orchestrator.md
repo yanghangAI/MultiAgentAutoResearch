@@ -66,15 +66,19 @@ The driver makes no assumptions about which agent CLI runs sub-agents. See `docs
 - `ClaudeCodeRunner` — wraps `claude -p --append-system-prompt ...`
 - `CodexRunner` — wraps `codex exec ...`
 
-Selection per role via `.automation.json`:
+Selection per role via `.automation.json`. Each adapter is configured with a single `command_template`: a list of argv elements where the literal string `"{spawn_message}"` is replaced with the actual spawn message. Defaults are baked into the adapters; users override only when they need different flags. No separate `command` / `permission_mode` / `approval_mode` keys — the template fully specifies the invocation:
 
 ```json
 {
   "agent_runner": {
     "default": "claude-code",
     "per_role": { "Reviewer": "codex" },
-    "claude-code": { "command": "claude", "permission_mode": "bypassPermissions" },
-    "codex":       { "command": "codex", "approval_mode": "auto" }
+    "claude-code": {
+      "command_template": ["claude", "-p", "{spawn_message}", "--permission-mode", "bypassPermissions"]
+    },
+    "codex": {
+      "command_template": ["codex", "exec", "{spawn_message}"]
+    }
   }
 }
 ```
@@ -85,7 +89,10 @@ Both adapters must be working before Phase 3 lands — no "default first, others
 
 - Stdout is used only for exit status and an audit-log tail. No `HANDOFF` schema. Filesystem is re-read for actual state.
 - Wall-clock timeout per role.
-- Every invocation appends one record to `logs/orchestrator/<timestamp>.jsonl` (cmd, exit code, elapsed, stdout/stderr tail).
+- Every invocation appends one record to `logs/orchestrator/<YYYYMMDD>.jsonl` (one daily file). Records carry: `ts`, `session_id` (UUID per orchestrator invocation, used to correlate Builder → submit-test → poll → respawn entries when 3b lands), `role`, `idea_id`, `design_id`, `review_mode`, `runner` name, `spawn_message`, `exit_code`, `elapsed_s`, `timed_out`, and stdout/stderr tails (8 KB cap).
+- Runner startup validation: every runner referenced in `agent_runner.default` and `agent_runner.per_role.*` is constructed and PATH-checked at orchestrator startup, before any sub-agent is dispatched.
+- `prompt_file` parameter on `runner.run()` is an existence guard, not piped to the child. Sub-agents load their own prompt via the spawn message ("Read `agents/<role>/prompt.md` ..."); the parameter only lets the runner fail fast if the prompt is missing.
+- Exit codes from `scripts/orchestrator.py --once`: `0` means the driver completed its dispatch (agent's own pass/fail lives on disk in `implementation_summary.md` / `*_review.md` / `implement_failed.md` and is read on the next snapshot); `1` means driver-side failure (timeout, non-zero CLI exit, missing runner, etc.).
 
 ## Judgment carve-outs
 
