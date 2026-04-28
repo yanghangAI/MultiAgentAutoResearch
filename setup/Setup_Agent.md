@@ -24,6 +24,7 @@ Read the target project directory thoroughly:
 - Shared utilities suitable for `infra/` (dataset loaders, metrics, evaluation, constants).
 - Canonical starting implementation suitable for `baseline/`.
 - How `submit-test` should run a fast mini-train.
+- **How to detect that a submitted test job has finished**, and how to read its pass/fail outcome. This is environment-specific (e.g. `squeue -j <job_id>` for Slurm, `pgrep -f train.py` / waiting on a foreground process for local, a sentinel file like `test_output/test_done.txt` written by `submit_test.sh`, presence of `training_failed.txt`, expected metrics rows in `test_output/metrics.csv`). The Builder needs an explicit procedure here so it can block on the test before deciding pass/fail. Pick a polling interval and a timeout suitable for the project's typical mini-train duration. If the chosen mechanism requires `submit_test.sh` to write a sentinel file, update the local submission script accordingly.
 - **Infra vs. baseline split:** For each file, decide whether it is shared (never modified between designs → `infra/`) or experiment-specific (may be modified per design → `baseline/`). If ambiguous, decide and note why.
 - **Project cleanliness:** Check for debug flags, commented-out code, WIP variants. If mid-experiment, ask which state to treat as baseline.
 
@@ -48,6 +49,11 @@ Write a `SETUP_SUMMARY.md` file at the repo root with your findings, structured 
 5. **Baseline files:** train.py, model.py, config.py
 6. **Infra files:** dataset.py, eval.py, utils.py
 7. **Submit-test:** run with --max-epochs 2 for fast validation
+8. **Test completion check:**
+   - Detect finished: `squeue -j <job_id>` returns empty (SLURM) | `pgrep -f train.py` returns nothing (local) | `test_output/test_done.txt` exists
+   - Read outcome: pass if `test_output/metrics.csv` has >=1 row and no `training_failed.txt`; fail otherwise
+   - Polling interval: 30s
+   - Timeout: 1800s (30 min)
 
 ## Contract
 - Experimentable files: ...
@@ -114,7 +120,8 @@ After both sub-agents complete successfully, verify the setup yourself:
    - No `training_failed.txt` in `runs/baseline/`.
 
 3. **Quick code checks:**
-   - No placeholder text in `agents/*/prompt.md` (e.g. `<your metric>`)
+   - No placeholder text in `agents/*/prompt.md` or `agents/Architect/prompt_explorer.md` (e.g. `<your metric>`)
+   - `agents/Orchestrator/prompt.md` does not carry project-specific vocabulary, metric names, baseline file lists, or runtime details — the Orchestrator is intentionally project-agnostic
    - `baseline/` files don't import from the original project directory
    - `infra/` modules are importable from the repo root
    - Submission scripts write `training_failed.txt` on failure

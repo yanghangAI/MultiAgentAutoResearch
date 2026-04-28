@@ -47,11 +47,12 @@ Each agent has a focused role:
 
 | Agent | What it does |
 |---|---|
-| **Architect** | Reads prior results; either proposes a new research direction or extends an existing one. Always names the starting point (`baseline/` or a specific prior design). |
+| **Architect** | Reads prior results; either proposes a new research direction or extends an existing one. Always names the starting point (`baseline/` or a specific prior design). Grounds proposals in observed performance patterns and a bounded literature search; logs investigations and searches to a shared memory pool so future invocations skip redundant work. |
+| **Architect (Explorer mode)** | Same role and output as the Architect, but runs from `agents/Architect/prompt_explorer.md` and is dedicated to producing genuinely unexplored directions — cross-domain transfers, contrarian approaches, techniques not yet present anywhere in `runs/`. Uses an expanded literature-search budget. Spawned on user request or when recent ideas are clustering on the same theme. Shares the same memory pool as the regular Architect. |
 | **Designer** | Elaborates one idea into concrete, implementable specs (`design.md`). Inherits the parent from the Architect. |
 | **Reviewer** | The *semantic* auditor — everything mechanical is handled by scripts (see Integrity checks below). For designs: spec completeness, idea non-contradiction, implementation feasibility with cited code evidence. For code: algorithm fidelity and training-signal sanity. Every verdict carries a mandatory "strongest objection" field, and every REJECTED writes a structured entry to the offending agent's memory log. |
 | **Builder** | Implements approved designs inside scope, quotes changed lines in `implementation_summary.md`, runs sanity tests. |
-| **Orchestrator** | Coordinates agents and runs orchestration-only scripts |
+| **Orchestrator** | Coordinates agents and runs orchestration-only scripts. Intentionally project-agnostic — its prompt carries no project vocabulary, metric names, or file paths; it only dispatches sub-agents (with minimal spawn messages: prompt path + role + identifiers) and runs scripts. All project knowledge lives in the sub-agent prompts that actually do the work. |
 | **Debugger** | Fixes unexpected automation or execution bugs reported by other agents |
 
 Experiment state is tracked in plain CSV files under `runs/`. The CLI keeps everything in sync.
@@ -122,6 +123,12 @@ The Orchestrator spawns the Architect, which reads prior results and proposes id
 
 The Architect will assess feasibility, check against prior work, ask clarifying questions, and iterate with you until the idea is precise and ready to design.
 
+**Want a wild, exploratory idea instead?** Call the Explorer-mode Architect to break out of local optima — it favors cross-domain transfers, contrarian approaches, and techniques not yet present in `runs/`:
+
+> Read `agents/Architect/prompt_explorer.md` and act as the Architect (Explorer mode).
+
+It uses an expanded literature-search budget and shares the same memory (Findings + Literature) as the regular Architect, so investigations and searches accumulate across both.
+
 **Need to change the project itself?** After a few experiments you may realize `infra/`, `baseline/`, or an agent prompt needs an update — a new metric, a corrected eval split, a sharper prompt. The normal idea → design loop can't make these changes (they're outside any single design's scope), so call the **Reviser**:
 
 > Read `agents/Reviser/prompt.md` and act as the Reviser. I want to change [what and why].
@@ -168,7 +175,7 @@ python scripts/cli.py setup-design baseline/ runs/idea001/design002/
 **Check results:**
 
 ```bash
-python scripts/cli.py summarize-results   # aggregates metrics.csv → results.csv
+python scripts/cli.py summarize-results   # aggregates metrics.csv → results.csv (includes `delta_vs_parent`, the design's primary-metric delta vs. the design or baseline it was bootstrapped from)
 python scripts/cli.py build-dashboard     # generates website/index.html
 ```
 

@@ -39,8 +39,31 @@ def parse_metrics_file(metrics_path: Path, ctx: ProjectContext) -> ResultRecord 
     )
 
 
+def _resolve_parent_key(design_path: Path, root: Path) -> tuple[str, str] | None:
+    """Map a design's `.parent` file to a (idea_id, design_id) record key.
+
+    Returns None if the design has no parent or its parent is not a tracked
+    record (e.g., points to a path outside `runs/`).
+    """
+    parent_path = scope_mod.read_parent(design_path)
+    if parent_path is None:
+        return None
+    if parent_path.name == "code":
+        parent_path = parent_path.parent
+    ref = layout.parse_design_ref(parent_path)
+    if ref is not None:
+        return ref
+    try:
+        if parent_path.resolve() == (root / "baseline").resolve():
+            return ("baseline", "baseline")
+    except OSError:
+        pass
+    return None
+
+
 def summarize_results(ctx: ProjectContext) -> list[ResultRecord]:
     progress_field = ctx.cfg.status.progress_field
+    primary = ctx.cfg.results.primary_metric
     records: list[ResultRecord] = []
     skipped_tainted = 0
     for metrics_path in discover_metrics_files(ctx):
@@ -61,13 +84,41 @@ def summarize_results(ctx: ProjectContext) -> list[ResultRecord]:
         print(f"Skipped {skipped_tainted} tainted design(s) from results aggregation.")
 
     records.sort(key=lambda item: (item.idea_id, item.design_id))
-    result_fields = _core_result_fields(progress_field) + list(ctx.cfg.results.metric_fields)
+
+    primary_by_key: dict[tuple[str, str], float] = {}
+    for record in records:
+        try:
+            primary_by_key[(record.idea_id, record.design_id)] = float(
+                record.metrics.get(primary, "")
+            )
+        except (TypeError, ValueError):
+            continue
+
+    result_fields = (
+        _core_result_fields(progress_field)
+        + list(ctx.cfg.results.metric_fields)
+        + ["delta_vs_parent"]
+    )
+
+    def _delta(record: ResultRecord) -> str:
+        self_key = (record.idea_id, record.design_id)
+        if self_key not in primary_by_key:
+            return ""
+        design_path = layout.design_dir(record.idea_id, record.design_id, ctx.root)
+        parent_key = _resolve_parent_key(design_path, ctx.root)
+        if parent_key is None or parent_key == self_key:
+            return ""
+        if parent_key not in primary_by_key:
+            return ""
+        return f"{primary_by_key[self_key] - primary_by_key[parent_key]:.6g}"
+
     out_rows = [
         {
             "idea_id": record.idea_id,
             "design_id": record.design_id,
             progress_field: record.progress,
             **record.metrics,
+            "delta_vs_parent": _delta(record),
         }
         for record in records
     ]

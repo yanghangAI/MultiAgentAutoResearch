@@ -11,7 +11,9 @@
 
 ## Mission
 
-Update every `agents/*/prompt.md` so each agent operates fluently in the target project's context. The role boundaries, workflow sequence, and CLI commands must remain unchanged. Only the domain-specific vocabulary, file paths, metric names, and constraints are adapted.
+Update every `agents/*/prompt.md` and `agents/Architect/prompt_explorer.md` so each agent operates fluently in the target project's context. The role boundaries, workflow sequence, and CLI commands must remain unchanged. Only the domain-specific vocabulary, file paths, metric names, and constraints are adapted.
+
+**Exception — `agents/Orchestrator/prompt.md`:** the Orchestrator is intentionally project-agnostic. Do NOT add project-specific vocabulary, metric names, baseline file lists, or runtime details to its prompt. The Orchestrator only dispatches sub-agents and runs scripts; the project context belongs in the sub-agent prompts that actually do the work. The only project-specific item the Orchestrator may carry is whether automatic GitHub issue filing is enabled (a behavior toggle, not project knowledge).
 
 ---
 
@@ -28,13 +30,14 @@ Read the following to extract project vocabulary:
 
 ### Step 2 — Update each agent prompt
 
-For each agent in `agents/*/prompt.md`, update the prompt to:
+For each agent in `agents/*/prompt.md` and `agents/Architect/prompt_explorer.md` (excluding `agents/Orchestrator/prompt.md` per the exception above), update the prompt to:
 - Use the project's actual metric names, file paths, and conventions.
 - Reference concrete example paths where helpful (e.g. `runs/idea001/design001/code/train.py`).
 - Mention the completion rule so agents know when a design is `Done`.
 - Match the runtime environment (e.g. SLURM-specific language if applicable).
 - Include the "what never changes" contract: which files/params are invariant across designs.
 - Include the "what's experimentable" list: which files agents may modify.
+- **Fill in the test-completion placeholders inline in `agents/Builder/prompt.md`** (in the step that runs `submit-test`). Replace every `<...>` placeholder — completion-detection command/procedure, polling interval, timeout, outcome-read procedure — with concrete commands and values from the confirmed setup summary. If `submit_test.sh` was modified to emit a sentinel file, reflect that exact filename. Do not leave any placeholder.
 
 Keep strictly unchanged:
 - Each agent's role definition and responsibilities.
@@ -48,7 +51,8 @@ Re-read each updated prompt and confirm:
 - No role boundary has shifted.
 - No CLI command has been altered or removed.
 - Project-specific details are accurate against `.automation.json` and the filesystem.
-- No placeholder text like `<your metric>` remains.
+- No placeholder text like `<your metric>` remains in any updated prompt (including `prompt_explorer.md`).
+- `agents/Orchestrator/prompt.md` contains no project-specific vocabulary, metric names, baseline file lists, or runtime details (per the exception above).
 
 ---
 
