@@ -118,7 +118,9 @@ Serial only. Phase-2 parallel Builders are removed from the migration path — `
    - All sub-agent prompts — replace Claude-Code-specific tool names (`Read`, `Edit`, `Bash`, `WebSearch`, `WebFetch`) with capability descriptions.
    - `setup/Setup_Agent.md`, `README.md` — generalize permission/bypass language.
 2. **`--dry-run`.** `state.py` + `scheduler.py` + `transitions.py`. Prints intended action against rich state. No subprocess calls.
-3. **`--once`.** Adds `runner.py` with **both** `ClaudeCodeRunner` and `CodexRunner` working. Executes one transition end-to-end including the driver-owned Builder loop. Includes a parity test suite: same spawn message through both adapters against a fixture project, equivalent filesystem outcomes asserted.
+3. **`--once`.** Split into two sub-phases:
+   - **3a.** Adds `runner.py` with **both** `ClaudeCodeRunner` and `CodexRunner` working, startup validation of every configured runner, audit log with per-invocation `session_id`, and one-shot dispatch of the chosen action. Builder is dispatched once and warns that the submit-test loop is not yet wired. Includes a parity test suite: same spawn message through both adapters against a fixture project, equivalent argv shape asserted.
+   - **3b.** Adds the driver-owned Builder loop: `cli.py submit-test` → poll for completion using the project's outcome procedure → classify pass/fail → respawn Builder with the failure log injected via spawn message; enforces 10-test-attempt and 3-code-review-rejection budgets per design. ARG_MAX guard for long failure logs and streaming subprocess output land here.
 4. **`--loop`.** Autonomous mode with timeouts, retries, audit log.
 5. **Judges.** Add Explorer/Debugger judges. Remove issue-body judge from scope.
 6. **Deprecate LLM Orchestrator.** README points at `scripts/orchestrator.py`. Old prompt kept as fallback.
