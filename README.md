@@ -113,8 +113,8 @@ After setup finishes, close that session and open a new agent-CLI session before
 
 You can run the orchestration loop in two equivalent ways:
 
-- **Python driver (recommended, agent-CLI agnostic):** `python scripts/orchestrator.py` — a state machine that re-snapshots the filesystem each step and spawns sub-agents through whichever CLI is configured in `.automation.json` (`claude-code`, `codex`, or any registered runner). See `docs/python_orchestrator.md` and `docs/agent_runner_contract.md`. *(This driver is in active development on the `python-orchestrator` branch.)*
-- **LLM Orchestrator (fallback):** open a new agent-CLI session and tell it to act as the Orchestrator:
+- **Python driver (agent-CLI agnostic):** `python scripts/orchestrator.py --dry-run` to see the next intended action against the live filesystem, or `--once` to dispatch one transition through the configured agent CLI. The driver re-snapshots the filesystem after every step and spawns sub-agents through whichever CLI is configured in `.automation.json` (`claude-code`, `codex`, or any adapter registered against `docs/agent_runner_contract.md`). The Builder retry loop (submit-test → poll → reinject failure log → enforce per-design budgets) lives in the driver, not in the Builder agent. The autonomous `--loop` mode is not yet wired — see `HANDOFF.md` for status. Full design in `docs/python_orchestrator.md`.
+- **LLM Orchestrator (today's default for autonomous campaigns):** open a new agent-CLI session and tell it to act as the Orchestrator:
 
 > Read `agents/Orchestrator/prompt.md` and act as the Orchestrator.
 
@@ -209,11 +209,27 @@ All behavior is controlled by `.automation.json`. The key fields:
   },
   "integrity": {
     "immutable_paths": ["infra/**"]
+  },
+  "agent_runner": {
+    "default": "claude-code",
+    "per_role": { "Reviewer": "codex" },
+    "claude-code": { "command_template": ["claude", "-p", "{spawn_message}", "--permission-mode", "bypassPermissions"] },
+    "codex":       { "command_template": ["codex", "exec", "{spawn_message}"] }
+  },
+  "builder_loop": {
+    "max_test_attempts": 10,
+    "max_code_review_rejections": 3,
+    "poll_interval_s": 30,
+    "test_timeout_s": 1800,
+    "outcome_check_command": null,
+    "failure_log_max_inline_bytes": 4096
   }
 }
 ```
 
 `integrity.immutable_paths` is a list of globs, relative to a design's `code/` directory, that must remain byte-identical to `baseline/`. Add paths here (e.g. eval loops, split files, metric code) that no design should ever be allowed to change.
+
+`agent_runner` and `builder_loop` are read by the Python driver (`scripts/orchestrator.py`); the LLM Orchestrator ignores them. Both blocks are optional with sensible defaults — set them only when you want a non-default agent CLI, a per-role override, or non-default retry/poll/timeout values. See `docs/agent_runner_contract.md` for adding a new adapter.
 
 The Setup Agent configures these fields for your environment. Reference implementations for Slurm and local runners live in `scripts/examples/`.
 
