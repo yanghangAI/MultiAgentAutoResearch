@@ -16,7 +16,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from scripts.lib import layout, store
+from scripts.lib import layout, scope as scope_mod, store
 from scripts.lib.context import ProjectContext
 from scripts.lib.models import Status
 
@@ -37,6 +37,7 @@ class DesignState:
     has_implement_failed: bool
     has_scope_check_pass: bool
     has_scope_check_fail: bool
+    is_tainted: bool  # scope_check.fail on self OR any ancestor via .parent
     has_job_submitted: bool
     has_training_failed: bool
     revision: str
@@ -115,6 +116,7 @@ class RichState:
                         has_implement_failed=_nonempty(design_path / "implement_failed.md"),
                         has_scope_check_pass=(design_path / "scope_check.pass").is_file(),
                         has_scope_check_fail=(design_path / "scope_check.fail").is_file(),
+                        is_tainted=scope_mod.is_tainted(design_path, root=ctx.root),
                         has_job_submitted=(design_path / "job_submitted.txt").is_file(),
                         has_training_failed=(design_path / "training_failed.txt").is_file(),
                         revision=row.get("Revision", ""),

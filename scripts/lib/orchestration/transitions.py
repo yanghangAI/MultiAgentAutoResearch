@@ -149,7 +149,7 @@ def next_action_for_idea(idea: IdeaState) -> Action | None:
     if any(
         d.code_review_approved
         and not d.has_job_submitted
-        and not d.has_scope_check_fail
+        and not d.is_tainted
         for d in designs
     ):
         return Action.submit_implemented()
@@ -172,7 +172,7 @@ def _next_design_to_build(designs: tuple[DesignState, ...]) -> DesignState | Non
             continue
         if d.has_implementation_summary or d.has_implement_failed:
             continue
-        if d.has_scope_check_fail:
+        if d.is_tainted:
             continue  # tainted — driver does not advance these
         return d
     return None

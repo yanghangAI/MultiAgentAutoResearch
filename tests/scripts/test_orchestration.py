@@ -212,6 +212,23 @@ def test_tainted_design_skipped_by_submit(tmp_path: Path) -> None:
     assert pick_next(state).role == "Architect"
 
 
+def test_ancestor_taint_propagates_to_child_design(tmp_path: Path) -> None:
+    """A design whose .parent has scope_check.fail must itself be treated
+    as tainted, even if the child has no scope_check.fail of its own."""
+    ctx = _make_ctx(tmp_path)
+    idea_dir = _make_idea(tmp_path, "idea001", expected_designs=2)
+    parent_d = _make_design(idea_dir, "design001")
+    (parent_d / "design_review.md").write_text("APPROVED.", encoding="utf-8")
+    (parent_d / "scope_check.fail").write_text("infra/foo.py changed", encoding="utf-8")
+    child_d = _make_design(idea_dir, "design002")
+    (child_d / "design_review.md").write_text("APPROVED.", encoding="utf-8")
+    (child_d / ".parent").write_text(str(parent_d.resolve()), encoding="utf-8")
+    state = RichState.snapshot(ctx)
+    # Both designs ineligible for Builder (one self-tainted, one
+    # ancestor-tainted). Falls through to Architect.
+    assert pick_next(state).role == "Architect"
+
+
 def test_empty_csv_with_on_disk_designs(tmp_path: Path) -> None:
     """sync-status hasn't run; design_overview.csv is empty but the
     filesystem has a design folder. Snapshot must surface it."""
