@@ -122,6 +122,12 @@ The Orchestrator spawns the Architect, which reads prior results and proposes id
 
 The Architect will assess feasibility, check against prior work, ask clarifying questions, and iterate with you until the idea is precise and ready to design.
 
+**Need to change the project itself?** After a few experiments you may realize `infra/`, `baseline/`, or an agent prompt needs an update — a new metric, a corrected eval split, a sharper prompt. The normal idea → design loop can't make these changes (they're outside any single design's scope), so call the **Reviser**:
+
+> Read `agents/Reviser/prompt.md` and act as the Reviser. I want to change [what and why].
+
+The Reviser confirms scope with you, runs `begin-revision` (which refuses if a design is mid-training and tags `pre-revNNN` on git HEAD as a recovery point), makes the edits, fills in `revisions.md` with a comparability note, and runs `finalize-revision` to flag any prior design whose results predate the change as `Stale_Since: revNNN`. Stale results stay in `results.csv` and the dashboard, just badged so the Architect knows they're not directly comparable to post-revision designs.
+
 ---
 
 ## Day-to-Day Usage
