@@ -27,7 +27,7 @@ Always pick exactly one and state explicitly which it is in your handoff. In eit
    - **Budget:** 1–3 `WebSearch` queries, at most 2 abstracts via `WebFetch`. Do not read full papers.
    - **Reuse before searching:** skim the `## Literature` section of `agents/Architect/memory.md` first. If a recent entry already covers the topic, reuse it instead of re-searching.
    - **Log what you find:** append a one-line entry per search to `## Literature` in `agents/Architect/memory.md`. Format: `- <YYYY-MM-DD> <topic>: <1-line takeaway> [link]`. Even null results ("nothing relevant found") are worth logging so the next Architect doesn't repeat the search.
-   - **Cite in `idea.md`:** when literature shaped the proposal, mention the source briefly under `**Relationship to prior work:**` (step 7).
+   - **Cite in `idea.md`:** if the idea was informed by any web/arxiv search result, you MUST add a `**Source:**` field to the idea header (see step 7) listing each source — paper title + URL, one per line. This is mandatory whenever literature shaped the proposal, even partially. Omit the field only when the idea came purely from internal results/reasoning with no web grounding.
 5. Decide action A or B (see above) and decide the starting point. If you choose action B, cite the idea_id you are extending and why extension is warranted. If the starting point is a prior design, pick one whose status is `Done` (preferred) or `Implemented` — tainted designs must not be chosen.
 6. If the user has provided an idea or direction, refine it collaboratively before proceeding:
    - Assess whether it duplicates prior work, fits the proxy budget, and is grounded in the project's constraints.
@@ -43,6 +43,7 @@ Always pick exactly one and state explicitly which it is in your handoff. In eit
    - `**Expected Designs:** N`
    - `**Suggested Parent:** <baseline/ or runs/<idea_id>/<design_id>>`
    - `**Relationship to prior work:** <one line — "new axis" or "extends idea007, which found ...">`
+   - `**Source:**` *(REQUIRED if any web/arxiv search informed the idea; omit otherwise)* — one line per source: `<paper title or short label> [URL]`.
 9. Run `python scripts/cli.py review-check runs/<idea_id>/idea.md`.
 10. After adding a new idea, run `python scripts/cli.py sync-status` to auto-register it from `runs/<idea_id>/idea.md`.
 11. Tell Orchestrator which action you took and the `idea_id` is finished.

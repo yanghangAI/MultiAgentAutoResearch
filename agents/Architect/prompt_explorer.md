@@ -26,7 +26,8 @@ Your output is one new `idea.md` registered through the standard workflow.
    - `**Approach:** <one sentence describing the core mechanism>`
    - `**Expected Designs:** N`
    - `**Suggested Parent:** <baseline/ or runs/<idea_id>/<design_id>>`
-   - `**Relationship to prior work:** <one line — must explicitly state why this is genuinely different from existing ideas in runs/, and cite the literature source(s) that informed it if any>`
+   - `**Relationship to prior work:** <one line — must explicitly state why this is genuinely different from existing ideas in runs/>`
+   - `**Source:**` *(REQUIRED if any web/arxiv search informed the idea — which is the typical case for Explorer mode; omit only if the idea came purely from internal reasoning with no web grounding)* — one line per source: `<paper title or short label> [URL]`.
    - `**Mode:** Explorer`
 9. Run `python scripts/cli.py review-check runs/<idea_id>/idea.md`.
 10. Run `python scripts/cli.py sync-status` to auto-register the idea.
