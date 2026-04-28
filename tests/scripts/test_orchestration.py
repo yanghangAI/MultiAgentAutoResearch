@@ -129,27 +129,97 @@ def test_fifo_ordering_picks_lowest_idea_id(tmp_path: Path) -> None:
     assert action.idea_id == "idea001"
 
 
-def test_prefer_in_flight_promotes_idea_with_designs(tmp_path: Path) -> None:
+def test_prefer_in_flight_promotes_idea_with_approved_design(tmp_path: Path) -> None:
     ctx = _make_ctx(tmp_path)
     _make_idea(tmp_path, "idea001")  # fresh, no designs
     idea_dir2 = _make_idea(tmp_path, "idea002")
-    _make_design(idea_dir2, "design001")  # in-flight
+    d = _make_design(idea_dir2, "design001")
+    (d / "design_review.md").write_text("APPROVED.", encoding="utf-8")
     state = RichState.snapshot(ctx)
     action = pick_next(state, prefer_in_flight=True)
     assert action.idea_id == "idea002"
 
 
-def test_designer_runs_again_when_below_expected_designs(tmp_path: Path) -> None:
+def test_expected_designs_does_not_gate_transitions(tmp_path: Path) -> None:
+    """Expected Designs is advisory; once every approved design has gone
+    through the full per-idea pipeline, the orchestrator must not spawn
+    Designer again on its own — the scheduler may, but transitions don't."""
     ctx = _make_ctx(tmp_path)
     idea_dir = _make_idea(tmp_path, "idea001", expected_designs=2)
     d = _make_design(idea_dir, "design001")
-    # design has been reviewed (so Designer is not racing Reviewer)
     (d / "design_review.md").write_text("APPROVED.", encoding="utf-8")
-    # also implemented + code-reviewed + submitted, so it's done from the
-    # orchestrator's per-design perspective
     (d / "implementation_summary.md").write_text("done", encoding="utf-8")
     (d / "code_review.md").write_text("APPROVED.", encoding="utf-8")
     (d / "job_submitted.txt").write_text("submitted", encoding="utf-8")
     state = RichState.snapshot(ctx)
-    action = next_action_for_idea(state.ideas[0])
-    assert action is not None and action.role == "Designer"
+    assert next_action_for_idea(state.ideas[0]) is None
+    assert pick_next(state).role == "Architect"
+
+
+def test_rejected_design_review_spawns_designer(tmp_path: Path) -> None:
+    """If every design exists but none is approved, Designer must run again."""
+    ctx = _make_ctx(tmp_path)
+    idea_dir = _make_idea(tmp_path, "idea001")
+    d = _make_design(idea_dir, "design001")
+    (d / "design_review.md").write_text("REJECTED — see strongest objection.", encoding="utf-8")
+    state = RichState.snapshot(ctx)
+    action = pick_next(state)
+    assert action.role == "Designer"
+    assert action.idea_id == "idea001"
+
+
+def test_mixed_code_review_state_still_spawns_code_reviewer(tmp_path: Path) -> None:
+    """One implemented design has code_review.md; another doesn't. The
+    second one must still trigger code review."""
+    ctx = _make_ctx(tmp_path)
+    idea_dir = _make_idea(tmp_path, "idea001", expected_designs=2)
+    d1 = _make_design(idea_dir, "design001")
+    (d1 / "design_review.md").write_text("APPROVED.", encoding="utf-8")
+    (d1 / "implementation_summary.md").write_text("done", encoding="utf-8")
+    (d1 / "code_review.md").write_text("APPROVED.", encoding="utf-8")
+    (d1 / "job_submitted.txt").write_text("submitted", encoding="utf-8")
+    d2 = _make_design(idea_dir, "design002")
+    (d2 / "design_review.md").write_text("APPROVED.", encoding="utf-8")
+    (d2 / "implementation_summary.md").write_text("done", encoding="utf-8")
+    state = RichState.snapshot(ctx)
+    action = pick_next(state)
+    assert action.role == "Reviewer"
+    assert action.review_mode == "code"
+
+
+def test_tainted_design_skipped_by_builder(tmp_path: Path) -> None:
+    """A design with scope_check.fail must not be picked by Builder."""
+    ctx = _make_ctx(tmp_path)
+    idea_dir = _make_idea(tmp_path, "idea001")
+    d = _make_design(idea_dir, "design001")
+    (d / "design_review.md").write_text("APPROVED.", encoding="utf-8")
+    (d / "scope_check.fail").write_text("infra/foo.py changed", encoding="utf-8")
+    state = RichState.snapshot(ctx)
+    # Tainted, no implementation, no code review — driver has nothing to do
+    # for this idea, falls through to Architect.
+    assert pick_next(state).role == "Architect"
+
+
+def test_tainted_design_skipped_by_submit(tmp_path: Path) -> None:
+    ctx = _make_ctx(tmp_path)
+    idea_dir = _make_idea(tmp_path, "idea001")
+    d = _make_design(idea_dir, "design001")
+    (d / "design_review.md").write_text("APPROVED.", encoding="utf-8")
+    (d / "implementation_summary.md").write_text("done", encoding="utf-8")
+    (d / "code_review.md").write_text("APPROVED.", encoding="utf-8")
+    (d / "scope_check.fail").write_text("tainted", encoding="utf-8")
+    state = RichState.snapshot(ctx)
+    assert pick_next(state).role == "Architect"
+
+
+def test_empty_csv_with_on_disk_designs(tmp_path: Path) -> None:
+    """sync-status hasn't run; design_overview.csv is empty but the
+    filesystem has a design folder. Snapshot must surface it."""
+    ctx = _make_ctx(tmp_path)
+    idea_dir = _make_idea(tmp_path, "idea001")
+    _make_design(idea_dir, "design001")
+    # design_overview.csv was created empty by _make_idea; do not populate it
+    state = RichState.snapshot(ctx)
+    assert len(state.ideas) == 1
+    assert len(state.ideas[0].designs) == 1
+    assert pick_next(state).role == "Reviewer"

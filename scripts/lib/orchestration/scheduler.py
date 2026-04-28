@@ -2,11 +2,13 @@
 
 Given a `RichState` (snapshot of every idea + design on disk), pick the
 single next `Action` the orchestrator should take. Defaults to FIFO by
-`idea_id`; a `prefer_in_flight` knob (config-driven, future) can promote
-ideas that already have any work past `Not Designed`.
+`idea_id`; a `prefer_in_flight` knob (config-driven, future) promotes
+ideas that have at least one APPROVED design review — i.e. real
+build/review/submit work waiting — over ideas whose only designs are
+unreviewed or rejected.
 
-If no idea has actionable work, the scheduler returns the Architect action
-so a new direction is proposed.
+If no idea has actionable work, the scheduler returns the Architect
+action so a new direction is proposed.
 """
 
 from __future__ import annotations
@@ -32,7 +34,7 @@ def _order_ideas(
     in_flight: list[IdeaState] = []
     fresh: list[IdeaState] = []
     for idea in ideas:
-        if any(d.has_design_md for d in idea.designs):
+        if any(d.design_review_approved for d in idea.designs):
             in_flight.append(idea)
         else:
             fresh.append(idea)

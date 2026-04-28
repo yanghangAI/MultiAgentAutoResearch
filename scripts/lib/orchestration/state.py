@@ -97,8 +97,8 @@ class RichState:
                     continue
                 design_id = design_path.name
                 row = design_csv_rows.get(design_id, {})
-                design_review_text = store.read_text(design_path / "design_review.md")
-                code_review_text = store.read_text(design_path / "code_review.md")
+                design_review_text = _safe_read_text(design_path / "design_review.md")
+                code_review_text = _safe_read_text(design_path / "code_review.md")
                 designs.append(
                     DesignState(
                         idea_id=idea_id,
@@ -106,17 +106,17 @@ class RichState:
                         description=row.get("Design_Description", ""),
                         status=row.get("Status", ""),
                         design_path=design_path,
-                        has_design_md=(design_path / "design.md").exists(),
+                        has_design_md=(design_path / "design.md").is_file(),
                         design_review_text=design_review_text,
                         code_review_text=code_review_text,
                         design_review_approved=(approved in design_review_text),
                         code_review_approved=(approved in code_review_text),
-                        has_implementation_summary=(design_path / "implementation_summary.md").exists(),
+                        has_implementation_summary=(design_path / "implementation_summary.md").is_file(),
                         has_implement_failed=_nonempty(design_path / "implement_failed.md"),
-                        has_scope_check_pass=(design_path / "scope_check.pass").exists(),
-                        has_scope_check_fail=(design_path / "scope_check.fail").exists(),
-                        has_job_submitted=(design_path / "job_submitted.txt").exists(),
-                        has_training_failed=(design_path / "training_failed.txt").exists(),
+                        has_scope_check_pass=(design_path / "scope_check.pass").is_file(),
+                        has_scope_check_fail=(design_path / "scope_check.fail").is_file(),
+                        has_job_submitted=(design_path / "job_submitted.txt").is_file(),
+                        has_training_failed=(design_path / "training_failed.txt").is_file(),
                         revision=row.get("Revision", ""),
                         stale_since=row.get("Stale_Since", ""),
                     )
@@ -137,7 +137,7 @@ class RichState:
 
 
 def _nonempty(path: Path) -> bool:
-    if not path.exists():
+    if not path.is_file():
         return False
     try:
         return path.stat().st_size > 0
@@ -145,8 +145,22 @@ def _nonempty(path: Path) -> bool:
         return False
 
 
+def _safe_read_text(path: Path) -> str:
+    """Read a small text artifact tolerantly. Snapshot must never crash.
+
+    Returns "" for missing files, non-files, or invalid encodings — the
+    caller treats empty string as "no signal" for review-approval checks.
+    """
+    if not path.is_file():
+        return ""
+    try:
+        return path.read_text(encoding="utf-8")
+    except (UnicodeDecodeError, OSError):
+        return ""
+
+
 def _parse_expected_designs(idea_md: Path) -> int | None:
-    text = store.read_text(idea_md)
+    text = _safe_read_text(idea_md)
     for line in text.splitlines():
         if line.lower().startswith("**expected designs:**"):
             tail = line.split(":", 1)[1].strip().strip("*").strip()
@@ -158,7 +172,7 @@ def _parse_expected_designs(idea_md: Path) -> int | None:
 
 
 def _infer_idea_name(idea_md: Path) -> str:
-    text = store.read_text(idea_md)
+    text = _safe_read_text(idea_md)
     for line in text.splitlines():
         if line.lower().startswith("**idea name:**"):
             return line.split(":", 1)[1].strip().strip("*").strip()
